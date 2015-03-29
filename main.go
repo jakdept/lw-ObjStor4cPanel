@@ -141,4 +141,6 @@ func rmdir(path string) {
 	}
 }
 
-func delete(path string)
+func delete(path string) {
+	bucket.Del(path)
+}
