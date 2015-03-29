@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	//"bufio"
@@ -15,11 +16,14 @@ const contentType = "binary/octet-stream"
 const pagesize = 10000
 
 var (
-	Bucket               s3.Bucket
-	command, pwd         string
+	Bucket  s3.Bucket
+	command string
+	//pwd                  string
 	cmdParams, host      string
 	accessKey, secretKey string
 )
+
+var bucket s3.Bucket
 
 /*
 region format:
@@ -58,12 +62,12 @@ var bucketRegion = aws.Region{
 	"",
 }
 
-func getArguments() *s3.Bucket {
+func main() {
 
 	// parameters are passed as:
 	// binary command pwd [cmdParams ...] host accessKey
 	command := os.Args[1]
-	pwd := os.Args[2]
+	//pwd := os.Args[2]
 	host := os.Args[len(os.Args)-2]
 	accessKey := os.Args[len(os.Args)-1]
 
@@ -72,11 +76,30 @@ func getArguments() *s3.Bucket {
 	// secretKey is passed via enviroment variable
 	secretKey := os.Getenv("PASSWORD")
 
-	bucketAuth := aws.Auth{accessKey, secretKey}
+	bucketAuth := new(aws.Auth)
+	bucketAuth.AccessKey = accessKey
+	bucketAuth.SecretKey = secretKey
+	//	bucketAuth := aws.Auth{accessKey, secretKey}
 
-	connection := s3.New(bucketAuth, bucketRegion)
-	bucket := connection.Bucket(host)
-	return bucket
+	connection := s3.New(*bucketAuth, bucketRegion)
+	bucket = *connection.Bucket(host)
+
+	switch command {
+	case "get":
+		get(cmdParams[0], cmdParams[1])
+	case "put":
+		put(cmdParams[0], cmdParams[1])
+	case "ls":
+		ls(cmdParams[0])
+	case "mkdir":
+		mkdir(cmdParams[0])
+	case "chdir":
+		chdir(cmdParams[0])
+	case "rmdir":
+		rmdir(cmdParams[0])
+	case "delete":
+		delete(cmdParams[0])
+	}
 }
 
 func get(remoteSource string, localDestionation string) {
@@ -97,15 +120,15 @@ func ls(path string) {
 	for _, target := range items.Contents {
 		// prints out in the format defined by:
 		// "-rwxr-xr-1 root root 3171 Jan 18 12:23 temp.txt"
-		fmt.printf("-rwxr-xr-1 %s %s %d Jan 18 12:23 %s", target.Owner, target.Owner, target.Size, target.Key)
+		fmt.Printf("-rwxr-xr-1 %s %s %d Jan 18 12:23 %s", target.Owner, target.Owner, target.Size, target.Key)
 	}
 }
 func mkdir(path string) {
 	return
 }
 
-func chdir(path string) string {
-	fmt.println(path)
+func chdir(path string) {
+	fmt.Println(path)
 }
 
 func rmdir(path string) {
@@ -114,7 +137,7 @@ func rmdir(path string) {
 		for _, target := range items.Contents {
 			Bucket.Del(target.Key)
 		}
-		items, _ := bucket.List(path, "", "", pagesize)
+		items, _ = bucket.List(path, "", "", pagesize)
 	}
 }
 
