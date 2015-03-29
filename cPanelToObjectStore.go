@@ -60,7 +60,7 @@ func rmdir(path string) {
 	itemsToNuke, _ := bucket.List(path, "", "", pagesize)
 	for length(itemsToNuke.Contents) > 0 {
 	for _, target := range itemsToNuke.Contents {
-
+		Bucket.Del(target)
 	}
 	itemsToNuke, _ := bucket.List(path, "", "", pagesize)
 }
