@@ -21,8 +21,8 @@ The script must implement the following commands:
 
 `Command` | `Parameters`
 ----------|--------------
-`get` 		|	`Remote file` `local file`
-`put` 		| `Local file` `remote file`
+`get` 		|	`remote file` `local file`
+`put` 		| `local file` `remote file`
 `ls`			| `Path`
 `mkdir`		| `Path`
 `chdir`		| `Path`
