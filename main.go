@@ -13,7 +13,7 @@ import (
 
 const contentType = "binary/octet-stream"
 
-const pagesize = 10000
+const pagesize = 1000
 
 var (
 	Bucket  s3.Bucket
@@ -84,63 +84,69 @@ func main() {
 	connection := s3.New(*bucketAuth, bucketRegion)
 	bucket = *connection.Bucket(host)
 
-	switch command {
-	case "get":
-		get(cmdParams[0], cmdParams[1])
-	case "put":
-		put(cmdParams[0], cmdParams[1])
-	case "ls":
-		ls(cmdParams[0])
-	case "mkdir":
-		mkdir(cmdParams[0])
-	case "chdir":
-		chdir(cmdParams[0])
-	case "rmdir":
-		rmdir(cmdParams[0])
-	case "delete":
-		delete(cmdParams[0])
-	}
+	// call the function with the name of the command that you got
+	command(cmdParams)
 }
 
-func get(remoteSource string, localDestionation string) {
+// Gets a file from the remote location and puts it on the local system
+// cli: `binary` `get` `pwd `Remote file` `local file` `bucketName` `username`
+// passed to this is ["remote file", "local file"]
+func get(args []string) {
 	//data := new(Buffer)
-	data, _ := Bucket.Get(remoteSource)
-	ioutil.WriteFile(localDestionation, data, 0644)
+	data, _ := Bucket.Get(args[0])
+	ioutil.WriteFile(args[1], data, 0644)
 }
 
-func put(localSource string, remoteDestination string) {
+// puts a file from the local location to a remote location
+// cli: `binary` `put` `pwd `local file` `remote file` `bucketName` `username`
+// passed to this is ["local file", "remote file"]
+func put(args []string) {
 	//data := new(Buffer)
-	data, _ := ioutil.ReadFile(localSource)
-	Bucket.Put(remoteDestination, data, contentType, "0644")
+	data, _ := ioutil.ReadFile(args[0])
+	Bucket.Put(args[1], data, contentType, "0644")
 }
 
-func ls(path string) {
+// lists the content of a directory on the remote system
+// cli: `binary` `ls` `pwd` `path` `bucketName` `username`
+// passed to this is ["path"]
+func ls(args []string) {
 	// ##todo## need to rework this yet
-	items, _ := Bucket.List(path, "", "", pagesize)
+	items, _ := Bucket.List(args[0], "", "", pagesize)
 	for _, target := range items.Contents {
 		// prints out in the format defined by:
 		// "-rwxr-xr-1 root root 3171 Jan 18 12:23 temp.txt"
 		fmt.Printf("-rwxr-xr-1 %s %s %d Jan 18 12:23 %s", target.Owner, target.Owner, target.Size, target.Key)
 	}
 }
-func mkdir(path string) {
+
+// does nothing - making of directories is not required, but is required for cPanel transport
+// cli: `binary` `mkdir` `pwd` `path` `bucketName` `username`
+func mkdir(args []string) {
 	return
 }
 
-func chdir(path string) {
-	fmt.Println(path)
+// does almost nothing - not required, but must return the path
+// cli: `binary` `chdir` `pwd` `path` `bucketName` `username`
+func chdir(args []string) {
+	fmt.Println(args[0])
 }
 
-func rmdir(path string) {
-	items, _ := bucket.List(path, "", "", pagesize)
+// removes everything under the given path on the remote bucket
+// cli: `binary` `rmdir` `pwd` `path` `bucketName` `username`
+// passed to this is ["path"]
+func rmdir(args []string) {
+	items, _ := bucket.List(args[0], "", "", pagesize)
 	for len(items.Contents) > 0 {
 		for _, target := range items.Contents {
 			Bucket.Del(target.Key)
 		}
-		items, _ = bucket.List(path, "", "", pagesize)
+		items, _ = bucket.List(args[0], "", "", pagesize)
 	}
 }
 
-func delete(path string) {
-	bucket.Del(path)
+// removes a file at a given location
+// cli: `delete` `rmdir` `pwd` `path` `bucketName` `username`
+// passed to this is ["path"]
+func delete(args []string) {
+	bucket.Del(args[0])
 }
