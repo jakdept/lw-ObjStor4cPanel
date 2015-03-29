@@ -48,24 +48,31 @@ func put(localSource string, remoteDestination string) {
 	Bucket.Put(remoteDestination, data, contentType, "0644")
 }
 
-func chdir(path string) string {
-	return path
+func ls(path string){
+	// ##todo## need to rework this yet
+	items, _ := Bucket.List(path, "", "", pagesize)
+	for _, target := range items.Contents {
+	// prints out in the format defined by:
+	// "-rwxr-xr-1 root root 3171 Jan 18 12:23 temp.txt"
+	fmt.printf("-rwxr-xr-1 %s %s %d Jan 18 12:23 %s", target.Owner, target.Owner, target.Size, target.Key)
 }
-
+}
 func mkdir(path string) {
 	return
 }
 
+func chdir(path string) string {
+	fmt.println(path)
+}
+
 func rmdir(path string) {
-	itemsToNuke, _ := bucket.List(path, "", "", pagesize)
-	for length(itemsToNuke.Contents) > 0 {
-	for _, target := range itemsToNuke.Contents {
-		Bucket.Del(target)
+	items, _ := bucket.List(path, "", "", pagesize)
+	for length(items.Contents) > 0 {
+	for _, target := range items.Contents {
+		Bucket.Del(target.Key)
 	}
-	itemsToNuke, _ := bucket.List(path, "", "", pagesize)
+	items, _ := bucket.List(path, "", "", pagesize)
 }
 }
 
-func ls(path string){
-	bucketContents, _ := Bucket.List(path, "", "", pagesize)
-}
+func delete(path string)
