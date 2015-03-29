@@ -85,7 +85,23 @@ func main() {
 	bucket = *connection.Bucket(host)
 
 	// call the function with the name of the command that you got
-	command(cmdParams)
+	switch command {
+	case "get":
+		get(cmdParams)
+	case "put":
+		put(cmdParams)
+	case "ls":
+		ls(cmdParams)
+	case "mkdir":
+		mkdir(cmdParams)
+	case "chdir":
+		chdir(cmdParams)
+	case "rmdir":
+		rmdir(cmdParams)
+	case "delete":
+		delete(cmdParams)
+	}
+	//command(cmdParams)
 }
 
 // Gets a file from the remote location and puts it on the local system
