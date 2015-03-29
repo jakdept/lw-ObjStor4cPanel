@@ -25,41 +25,21 @@ var (
 
 var bucket s3.Bucket
 
-/*
-region format:
-type Region struct {
-	Name                 string // the canonical name of this region.
-	EC2Endpoint          string
-	S3Endpoint           string
-	S3BucketEndpoint     string // Not needed by AWS S3. Use ${bucket} for bucket name.
-	S3LocationConstraint bool   // true if this region requires a LocationConstraint declaration.
-	S3LowercaseBucket    bool   // true if the region requires bucket names to be lower case.
-	SDBEndpoint          string
-	SNSEndpoint          string
-	SQSEndpoint          string
-	IAMEndpoint          string
-	ELBEndpoint          string
-	AutoScalingEndpoint  string
-	RdsEndpoint          string
-	Route53Endpoint      string
-}
-*/
-
 var bucketRegion = aws.Region{
-	"LiquidWeb",
-	"",
-	"",
-	"https://objects.liquidweb.services",
-	true,
-	true,
-	"https://objects.liquidweb.services",
-	"",
-	"",
-	"",
-	"",
-	"",
-	"",
-	"",
+	"LiquidWeb", //Name
+	"",          //EC2Endpoint
+	"",          //S3Endpoint
+	"https://objects.liquidweb.services", //S3BucketEndpoint
+	true, //S3LocationConstraint
+	true, //S3LowercaseBucket
+	"https://objects.liquidweb.services", //SDBEndpoint
+	"", //SNSEndpoint
+	"", //SQSEndpoint
+	"", //IAMEndpoint
+	"", //ELBEndpoint
+	"", //AutoScalingEndpoint
+	"", //RdsEndpoint
+	"", //RouteS3Endpoint
 }
 
 func main() {
