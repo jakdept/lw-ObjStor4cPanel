@@ -3,7 +3,7 @@ package main
 // cPanel backup transport helper for Liquidweb Object Storage
 // By Jack Hayhurst
 
-// TODO buffering needs to be added for file uploads and downloads
+// ## TODO buffering needs to be added for file uploads and downloads
 // https://www.socketloop.com/tutorials/golang-upload-big-file-larger-than-100mb-to-aws-s3-with-multipart-upload
 
 import (
@@ -11,7 +11,8 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	//"bufio"
+	"bufio"
+	"http"
 
 	"github.com/mitchellh/goamz/aws"
 	"github.com/mitchellh/goamz/s3"
@@ -21,7 +22,7 @@ const contentType = "binary/octet-stream"
 
 const pagesize = 1000
 
-const chunkSize = 32*1024 ^ 2
+const chunkSize = 33554432 // 32M in bytes
 
 type runningConfig struct {
 	command   string
@@ -49,7 +50,7 @@ func getConfig() runningConfig {
 	return *config
 }
 
-// TODO remove this stuff once you're sure you do not need it
+// ## TODO remove this stuff once you're sure you do not need it
 /*
 var (
 	Bucket  s3.Bucket
@@ -127,7 +128,7 @@ func callFunc(config runningConfig, bucket s3.Bucket) {
 		delete(config, bucket)
 	}
 
-	// TODO - setting up a function map for all of the functions to call
+	// ## TODO - setting up a function map for all of the functions to call
 	// looks like this won't work without:
 	// https://bitbucket.org/mikespook/golib/src/27c65cdf8a77/funcmap/
 	// maybe read more here:
@@ -169,20 +170,71 @@ func get(config runningConfig, bucket s3.Bucket) {
 
 // puts a file from the local location to a remote location
 // cli: `binary` `put` `pwd `local file` `remote file` `bucketName` `username`
-// passed to this is ["local file", "remote file"]
 func put(config runningConfig, bucket s3.Bucket) {
 	//data := new(Buffer)
 	data, err := ioutil.ReadFile(config.cmdParams[0])
 	reportError("Caught an error loading the local file %s", config.cmdParams[0], err)
 	err = bucket.Put(config.cmdParams[1], data, contentType, "0644")
-	reportError("Caught an error loading the local file %s", config.cmdParams[0], err)
+	reportError("Caught an error saving the remote file %s", config.cmdParams[1], err)
+}
+
+// puts a file from the local location to a remote location by pieces
+// cli: `binary` `put` `pwd `local file` `remote file` `bucketName` `username`
+func putParts(config runningConfig, bucket S3Bucket) {
+	// open the file to be transferred
+	file, err := os.Open(config.cmdParams[0])
+	reportError("Caught an error opening the local file %s", config.cmdParams[0], err)
+
+	defer file.Close()
+
+	fileInfo, _ := file.Stat()
+	fileSize := fileInfo.Size()
+
+	bytes := make([]byte, fileSize)
+
+	buffer := bufio.NewReader(file)
+	_, err = buffer.Read(bytes)
+
+	// determine the filetype
+	http.DetectContentType(bytes)
+
+	// set up for multipart upload
+	multi, err := bucket.InitMulti(config.cmdParams[1], filetype, s3.ACL("private"))
+
+	if err != nil {
+		log.Println(err)
+		os.Exit(1)
+	}
+
+	totalPartsNum := uint64(math.Ceil(float64(filesize)/float64(chunkSize)))
+
+	parts := []s3.Part{}
+
+	for i :- uint64(1); i< totalPartsNum; i++ {
+		partSize := int(mat.Min(chunkSize, float64(filesize-int64(i*chunkSize))))
+		partBuffer := make([]byte, partSize)
+		file.Read(partBuffer)
+		part, err :=multi.putPart(int(i), file)
+		fmt.Printf("Processing %d part of %d and uploaded %d bytes.", int(i), int(totalPartsNumb), int(part.Size))
+		parts = append(parts,part)
+		if err != nil {
+			log.Printf("Uploading parts of file error :i %s \n ", err)
+			os.Exit(1)
+		}
+	}
+	err = multi.Complete(parts)
+
+	if err != nil{
+		log.Printf("Error completing parts %s", err)
+		os.Exit(1)
+	}
+	return
 }
 
 // lists the content of a directory on the remote system
 // cli: `binary` `ls` `pwd` `path` `bucketName` `username`
 // passed to this is ["path"]
 func ls(config runningConfig, bucket s3.Bucket) {
-	// ##todo## need to rework this yet
 	items, err := bucket.List(config.cmdParams[0], "", "", pagesize)
 	reportError("Failed listing contents of the Bucket behind the path %s", config.cmdParams[0], err)
 	for _, target := range items.Contents {
