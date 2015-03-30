@@ -180,7 +180,7 @@ func put(config runningConfig, bucket s3.Bucket) {
 
 // puts a file from the local location to a remote location by pieces
 // cli: `binary` `put` `pwd `local file` `remote file` `bucketName` `username`
-func putParts(config runningConfig, bucket S3Bucket) {
+func magicPut(config runningConfig, bucket S3Bucket) {
 	// open the file to be transferred
 	file, err := os.Open(config.cmdParams[0])
 	reportError("Caught an error opening the local file %s", config.cmdParams[0], err)
