@@ -70,6 +70,8 @@ func main() {
 	connection := s3.New(*bucketAuth, bucketRegion)
 	bucket = *connection.Bucket(host)
 
+	// ##TODO## buffering needs to be added for file uploads and downloads
+
 	// ##TODO##
 	// setting up a function map for all of the functions to call
 	// looks like this won't work without:
