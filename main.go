@@ -110,13 +110,24 @@ func main() {
 	//command(cmdParams)
 }
 
+func reportError(message string, messageSub string, err error) {
+	if err != nil {
+		log.Printf(message, messageSub)
+		log.Println(err.Error())
+		os.Exit(1)
+	}
+	return
+}
+
 // Gets a file from the remote location and puts it on the local system
 // cli: `binary` `get` `pwd `Remote file` `local file` `bucketName` `username`
 // passed to this is ["remote file", "local file"]
 func get(args []string) {
 	//data := new(Buffer)
-	data, _ := Bucket.Get(args[0])
-	ioutil.WriteFile(args[1], data, 0644)
+	data, err := Bucket.Get(args[0])
+	reportError("Caught an error loading the remote file %s", args[0], err)
+	err = ioutil.WriteFile(args[1], data, 0644)
+	reportError("Caught an writing the local file %s", args[1], err)
 }
 
 // puts a file from the local location to a remote location
@@ -124,8 +135,10 @@ func get(args []string) {
 // passed to this is ["local file", "remote file"]
 func put(args []string) {
 	//data := new(Buffer)
-	data, _ := ioutil.ReadFile(args[0])
-	Bucket.Put(args[1], data, contentType, "0644")
+	data, err := ioutil.ReadFile(args[0])
+	reportError("Caught an error loading the local file %s", args[0], err)
+	err = Bucket.Put(args[1], data, contentType, "0644")
+	reportError("Caught an error loading the local file %s", args[0], err)
 }
 
 // lists the content of a directory on the remote system
@@ -133,11 +146,13 @@ func put(args []string) {
 // passed to this is ["path"]
 func ls(args []string) {
 	// ##todo## need to rework this yet
-	items, _ := Bucket.List(args[0], "", "", pagesize)
+	items, err := Bucket.List(args[0], "", "", pagesize)
+	reportError("Failed listing contents of the Bucket behind the path %s", args[0], err)
 	for _, target := range items.Contents {
 		// prints out in the format defined by:
 		// "-rwxr-xr-1 root root 3171 Jan 18 12:23 temp.txt"
-		fmt.Printf("-rwxr-xr-1 %s %s %d Jan 18 12:23 %s", target.Owner, target.Owner, target.Size, target.Key)
+		err = fmt.Printf("-rwxr-xr-1 %s %s %d Jan 18 12:23 %s", target.Owner, target.Owner, target.Size, target.Key)
+		reportError("Failed displaying the file %s", target.Key, err)
 	}
 }
 
@@ -150,17 +165,20 @@ func mkdir(args []string) {
 // does almost nothing - not required, but must return the path
 // cli: `binary` `chdir` `pwd` `path` `bucketName` `username`
 func chdir(args []string) {
-	fmt.Println(args[0])
+	_, err := fmt.Println(args[0])
+	reportError("failed to print the given path %s", args[0], err)
 }
 
 // removes everything under the given path on the remote bucket
 // cli: `binary` `rmdir` `pwd` `path` `bucketName` `username`
 // passed to this is ["path"]
 func rmdir(args []string) {
-	items, _ := bucket.List(args[0], "", "", pagesize)
+	items, err := bucket.List(args[0], "", "", pagesize)
+	reportError("Failed listing contents of the Bucket behind the path %s", args[0], err)
 	for len(items.Contents) > 0 {
 		for _, target := range items.Contents {
-			Bucket.Del(target.Key)
+			err = Bucket.Del(target.Key)
+			reportError("Failed removing the target %s from the Bucket", target.Key, err)
 		}
 		items, _ = bucket.List(args[0], "", "", pagesize)
 	}
@@ -170,5 +188,6 @@ func rmdir(args []string) {
 // cli: `delete` `rmdir` `pwd` `path` `bucketName` `username`
 // passed to this is ["path"]
 func delete(args []string) {
-	bucket.Del(args[0])
+	err := bucket.Del(args[0])
+	reportError("failed to delete file %s", args[0], err)
 }
