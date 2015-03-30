@@ -15,6 +15,33 @@ const contentType = "binary/octet-stream"
 
 const pagesize = 1000
 
+type runningConfig struct{
+	command string
+	pwd string
+	host string
+	cmdParams []string
+	accessKey string
+	secretKey string
+}
+
+func getConfig()(runningConfig){
+	config = new(runningConfig)
+	// parameters are passed as:
+	// binary command pwd [cmdParams ...] host accessKey
+	config.command := os.Args[1]
+	//pwd := os.Args[2]
+	config.host := os.Args[len(os.Args)-2]
+	config.accessKey := os.Args[len(os.Args)-1]
+
+	config.cmdParams := os.Args[3 : len(os.Args)-2]
+
+	// secretKey is passed via enviroment variable
+	config.secretKey := os.Getenv("PASSWORD")
+
+	return config
+}
+
+
 var (
 	Bucket  s3.Bucket
 	command string
@@ -23,15 +50,14 @@ var (
 	accessKey, secretKey string
 )
 
-/*
-type map[string]commandFunc interface {
-	run(args []string)
-}
-*/
 
 var bucket s3.Bucket
 
-var bucketRegion = aws.Region{
+
+func createBucket(config runningConfig){
+
+// set up the required bucket
+bucketRegion := aws.Region{
 	"LiquidWeb", //Name
 	"",          //EC2Endpoint
 	"",          //S3Endpoint
@@ -47,6 +73,18 @@ var bucketRegion = aws.Region{
 	"", //RdsEndpoint
 	"", //RouteS3Endpoint
 }
+
+	bucketAuth := new(aws.Auth)
+	bucketAuth.AccessKey = config.accessKey
+	bucketAuth.SecretKey = config.secretKey
+	//	bucketAuth := aws.Auth{accessKey, secretKey}
+
+	connection := s3.New(*bucketAuth, bucketRegion)
+	bucket = *connection.Bucket(config.host)
+	
+	return bucket
+}
+
 
 func main() {
 
@@ -73,25 +111,6 @@ func main() {
 	// TODO buffering needs to be added for file uploads and downloads
 	// https://www.socketloop.com/tutorials/golang-upload-big-file-larger-than-100mb-to-aws-s3-with-multipart-upload
 
-	// TODO
-	// setting up a function map for all of the functions to call
-	// looks like this won't work without:
-	// https://bitbucket.org/mikespook/golib/src/27c65cdf8a77/funcmap/
-	// maybe read more here:
-	// http://blog.golang.org/laws-of-reflection
-	/*
-		cmdFuncs := map[string]commandFunc{}{
-			"get":    get,
-			"put":    put,
-			"ls":     ls,
-			"mkdir":  mkdir,
-			"chdir":  chdir,
-			"rmdir":  rmdir,
-			"delete": delete,
-		}
-
-		cmdFuncs[command].run(cmdParams)
-	*/
 
 	// call the function with the name of the command that you got
 	switch command {
@@ -112,6 +131,33 @@ func main() {
 	}
 	//command(cmdParams)
 }
+
+/*
+// in case I want to try to go back to setting up a function map with reflection
+type map[string]commandFunc interface {
+	run(args []string)
+}
+*/
+
+	// TODO
+	// setting up a function map for all of the functions to call
+	// looks like this won't work without:
+	// https://bitbucket.org/mikespook/golib/src/27c65cdf8a77/funcmap/
+	// maybe read more here:
+	// http://blog.golang.org/laws-of-reflection
+	/*
+		cmdFuncs := map[string]commandFunc{}{
+			"get":    get,
+			"put":    put,
+			"ls":     ls,
+			"mkdir":  mkdir,
+			"chdir":  chdir,
+			"rmdir":  rmdir,
+			"delete": delete,
+		}
+
+		cmdFuncs[command].run(cmdParams)
+	*/
 
 func reportError(message string, messageSub string, err error) {
 	if err != nil {
