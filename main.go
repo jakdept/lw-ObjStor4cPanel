@@ -15,6 +15,8 @@ const contentType = "binary/octet-stream"
 
 const pagesize = 1000
 
+const chunkSize = 32*1024^2
+
 type runningConfig struct{
 	command string
 	pwd string
@@ -41,7 +43,8 @@ func getConfig()(runningConfig){
 	return config
 }
 
-
+// TODO remove this stuff once you're sure you do not need it
+/*
 var (
 	Bucket  s3.Bucket
 	command string
@@ -49,12 +52,9 @@ var (
 	cmdParams, host      string
 	accessKey, secretKey string
 )
+*/
 
-
-var bucket s3.Bucket
-
-
-func createBucket(config runningConfig){
+func createBucket(config runningConfig) s3.Bucket {
 
 // set up the required bucket
 bucketRegion := aws.Region{
@@ -88,25 +88,9 @@ bucketRegion := aws.Region{
 
 func main() {
 
-	// parameters are passed as:
-	// binary command pwd [cmdParams ...] host accessKey
-	command := os.Args[1]
-	//pwd := os.Args[2]
-	host := os.Args[len(os.Args)-2]
-	accessKey := os.Args[len(os.Args)-1]
+	config := getConfig();
 
-	cmdParams := os.Args[3 : len(os.Args)-2]
-
-	// secretKey is passed via enviroment variable
-	secretKey := os.Getenv("PASSWORD")
-
-	bucketAuth := new(aws.Auth)
-	bucketAuth.AccessKey = accessKey
-	bucketAuth.SecretKey = secretKey
-	//	bucketAuth := aws.Auth{accessKey, secretKey}
-
-	connection := s3.New(*bucketAuth, bucketRegion)
-	bucket = *connection.Bucket(host)
+	bucket := createBucket(config)
 
 	// TODO buffering needs to be added for file uploads and downloads
 	// https://www.socketloop.com/tutorials/golang-upload-big-file-larger-than-100mb-to-aws-s3-with-multipart-upload
@@ -115,19 +99,19 @@ func main() {
 	// call the function with the name of the command that you got
 	switch command {
 	case "get":
-		get(cmdParams)
+		get(config, bucket, cmdParams)
 	case "put":
-		put(cmdParams)
+		put(config, bucket, cmdParams)
 	case "ls":
-		ls(cmdParams)
+		ls(config, bucket, cmdParams)
 	case "mkdir":
-		mkdir(cmdParams)
+		mkdir(config, bucket, cmdParams)
 	case "chdir":
-		chdir(cmdParams)
+		chdir(config, bucket, cmdParams)
 	case "rmdir":
-		rmdir(cmdParams)
+		rmdir(config, bucket, cmdParams)
 	case "delete":
-		delete(cmdParams)
+		delete(config, bucket, cmdParams)
 	}
 	//command(cmdParams)
 }
@@ -171,9 +155,9 @@ func reportError(message string, messageSub string, err error) {
 // Gets a file from the remote location and puts it on the local system
 // cli: `binary` `get` `pwd `Remote file` `local file` `bucketName` `username`
 // passed to this is ["remote file", "local file"]
-func get(args []string) {
+func get(config runningConfig, bucket s3.Bucket, args []string) {
 	//data := new(Buffer)
-	data, err := Bucket.Get(args[0])
+	data, err := bucket.Get(args[0])
 	reportError("Caught an error loading the remote file %s", args[0], err)
 	err = ioutil.WriteFile(args[1], data, 0644)
 	reportError("Caught an writing the local file %s", args[1], err)
@@ -182,20 +166,20 @@ func get(args []string) {
 // puts a file from the local location to a remote location
 // cli: `binary` `put` `pwd `local file` `remote file` `bucketName` `username`
 // passed to this is ["local file", "remote file"]
-func put(args []string) {
+func put(config runningConfig, bucket s3.Bucket, args []string) {
 	//data := new(Buffer)
 	data, err := ioutil.ReadFile(args[0])
 	reportError("Caught an error loading the local file %s", args[0], err)
-	err = Bucket.Put(args[1], data, contentType, "0644")
+	err = bucket.Put(args[1], data, contentType, "0644")
 	reportError("Caught an error loading the local file %s", args[0], err)
 }
 
 // lists the content of a directory on the remote system
 // cli: `binary` `ls` `pwd` `path` `bucketName` `username`
 // passed to this is ["path"]
-func ls(args []string) {
+func ls(config runningConfig, bucket s3.Bucket, args []string) {
 	// ##todo## need to rework this yet
-	items, err := Bucket.List(args[0], "", "", pagesize)
+	items, err := bucket.List(args[0], "", "", pagesize)
 	reportError("Failed listing contents of the Bucket behind the path %s", args[0], err)
 	for _, target := range items.Contents {
 		// prints out in the format defined by:
@@ -207,13 +191,13 @@ func ls(args []string) {
 
 // does nothing - making of directories is not required, but is required for cPanel transport
 // cli: `binary` `mkdir` `pwd` `path` `bucketName` `username`
-func mkdir(args []string) {
+func mkdir(config runningConfig, bucket s3.Bucket, args []string) {
 	return
 }
 
 // does almost nothing - not required, but must return the path
 // cli: `binary` `chdir` `pwd` `path` `bucketName` `username`
-func chdir(args []string) {
+func chdir(config runningConfig, bucket s3.Bucket, args []string) {
 	_, err := fmt.Println(args[0])
 	reportError("failed to print the given path %s", args[0], err)
 }
@@ -221,12 +205,12 @@ func chdir(args []string) {
 // removes everything under the given path on the remote bucket
 // cli: `binary` `rmdir` `pwd` `path` `bucketName` `username`
 // passed to this is ["path"]
-func rmdir(args []string) {
+func rmdir(config runningConfig, bucket s3.Bucket, args []string) {
 	items, err := bucket.List(args[0], "", "", pagesize)
 	reportError("Failed listing contents of the Bucket behind the path %s", args[0], err)
 	for len(items.Contents) > 0 {
 		for _, target := range items.Contents {
-			err = Bucket.Del(target.Key)
+			err = bucket.Del(target.Key)
 			reportError("Failed removing the target %s from the Bucket", target.Key, err)
 		}
 		items, _ = bucket.List(args[0], "", "", pagesize)
