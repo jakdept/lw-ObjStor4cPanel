@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	//"bufio"
-	//"log"
 
 	"github.com/mitchellh/goamz/aws"
 	"github.com/mitchellh/goamz/s3"
@@ -22,6 +22,12 @@ var (
 	cmdParams, host      string
 	accessKey, secretKey string
 )
+
+/*
+type map[string]commandFunc interface {
+	run(args []string)
+}
+*/
 
 var bucket s3.Bucket
 
@@ -63,6 +69,26 @@ func main() {
 
 	connection := s3.New(*bucketAuth, bucketRegion)
 	bucket = *connection.Bucket(host)
+
+	// ##TODO##
+	// setting up a function map for all of the functions to call
+	// looks like this won't work without:
+	// https://bitbucket.org/mikespook/golib/src/27c65cdf8a77/funcmap/
+	// maybe read more here:
+	// http://blog.golang.org/laws-of-reflection
+	/*
+		cmdFuncs := map[string]commandFunc{}{
+			"get":    get,
+			"put":    put,
+			"ls":     ls,
+			"mkdir":  mkdir,
+			"chdir":  chdir,
+			"rmdir":  rmdir,
+			"delete": delete,
+		}
+
+		cmdFuncs[command].run(cmdParams)
+	*/
 
 	// call the function with the name of the command that you got
 	switch command {
