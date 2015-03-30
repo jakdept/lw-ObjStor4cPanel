@@ -33,7 +33,7 @@ type runningConfig struct {
 }
 
 func getConfig() runningConfig {
-	config = new(runningConfig)
+	config := new(runningConfig)
 	// parameters are passed as:
 	// binary command pwd [cmdParams ...] host accessKey
 	config.command = os.Args[1]
@@ -46,7 +46,7 @@ func getConfig() runningConfig {
 	// secretKey is passed via enviroment variable
 	config.secretKey = os.Getenv("PASSWORD")
 
-	return config
+	return *config
 }
 
 // TODO remove this stuff once you're sure you do not need it
@@ -86,7 +86,7 @@ func createBucket(config runningConfig) s3.Bucket {
 	//	bucketAuth := aws.Auth{accessKey, secretKey}
 
 	connection := s3.New(*bucketAuth, bucketRegion)
-	bucket = *connection.Bucket(config.host)
+	bucket := *connection.Bucket(config.host)
 
 	return bucket
 }
@@ -107,7 +107,7 @@ type map[string]commandFunc interface {
 }
 */
 
-func callFunc(config, bucket) {
+func callFunc(config runningConfig, bucket s3.Bucket) {
 	// call the function with the name of the command that you got
 
 	switch config.command {
@@ -127,8 +127,7 @@ func callFunc(config, bucket) {
 		delete(config, bucket)
 	}
 
-	// TODO
-	// setting up a function map for all of the functions to call
+	// TODO - setting up a function map for all of the functions to call
 	// looks like this won't work without:
 	// https://bitbucket.org/mikespook/golib/src/27c65cdf8a77/funcmap/
 	// maybe read more here:
