@@ -168,6 +168,22 @@ func get(config runningConfig, bucket s3.Bucket) {
 	reportError("Caught an writing the local file %s", config.cmdParams[1], err)
 }
 
+func magicGet(config runningConfig, bucket s3.Bucket) {
+	// open up the output file for writing
+	outFile, err := os.Create(config.cmdParams[1])
+	defer outFile.Close()
+	reportError("Caught an writing the local file %s", config.cmdParams[1], err)
+
+	// open up the remote file for reading
+	dataResponse, err := bucket.GetResponse(config.cmdParams[0])
+	defer dataResponse.Body.Close()
+	reportError("Caught an error loading the remote file %s", config.cmdParams[0], err)
+
+	// copy all bytes, without loading stuff in memory, then defer close happen
+	_, err := io.Copy(out, dataResponse.Body)
+	reportError("Caught an writing the local file %s", config.cmdParams[1], err)
+}
+
 // puts a file from the local location to a remote location
 // cli: `binary` `put` `pwd `local file` `remote file` `bucketName` `username`
 func put(config runningConfig, bucket s3.Bucket) {
@@ -183,9 +199,8 @@ func put(config runningConfig, bucket s3.Bucket) {
 func magicPut(config runningConfig, bucket s3.Bucket) {
 	// open the file to be transferred
 	file, err := os.Open(config.cmdParams[0])
-	reportError("Caught an error opening the local file %s", config.cmdParams[0], err)
-
 	defer file.Close()
+	reportError("Caught an error opening the local file %s", config.cmdParams[0], err)
 
 	bytes := make([]byte, chunkSize)
 	buffer := bufio.NewReader(file)
