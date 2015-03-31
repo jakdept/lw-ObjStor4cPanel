@@ -7,12 +7,12 @@ package main
 // https://www.socketloop.com/tutorials/golang-upload-big-file-larger-than-100mb-to-aws-s3-with-multipart-upload
 
 import (
+	"bufio"
 	"fmt"
 	"io/ioutil"
 	"log"
-	"os"
-	"bufio"
 	"net/http"
+	"os"
 
 	"github.com/mitchellh/goamz/aws"
 	"github.com/mitchellh/goamz/s3"
@@ -180,72 +180,17 @@ func put(config runningConfig, bucket s3.Bucket) {
 
 // puts a file from the local location to a remote location by pieces
 // cli: `binary` `put` `pwd `local file` `remote file` `bucketName` `username`
-func examplePut(config runningConfig, bucket S3Bucket) {
+func magicPut(config runningConfig, bucket s3.Bucket) {
 	// open the file to be transferred
 	file, err := os.Open(config.cmdParams[0])
 	reportError("Caught an error opening the local file %s", config.cmdParams[0], err)
 
 	defer file.Close()
-
-	fileInfo, _ := file.Stat()
-	fileSize := fileInfo.Size()
-
-	bytes := make([]byte, fileSize)
-
-	buffer := bufio.NewReader(file)
-	// at most, buffer.Read can only read len(bytes) bytes
-	_, err = buffer.Read(bytes)
-
-	// determine the filetype
-	http.DetectContentType(bytes)
-
-	// set up for multipart upload
-	multi, err := bucket.InitMulti(config.cmdParams[1], filetype, s3.ACL("private"))
-
-	if err != nil {
-		log.Println(err)
-		os.Exit(1)
-	}
-
-	totalPartsNum := uint64(math.Ceil(float64(filesize)/float64(chunkSize)))
-
-	parts := []s3.Part{}
-
-	for i :- uint64(1); i< totalPartsNum; i++ {
-		partSize := int(mat.Min(chunkSize, float64(filesize-int64(i*chunkSize))))
-		partBuffer := make([]byte, partSize)
-		file.Read(partBuffer)
-		part, err :=multi.putPart(int(i), file)
-		fmt.Printf("Processing %d part of %d and uploaded %d bytes.", int(i), int(totalPartsNumb), int(part.Size))
-		parts = append(parts,part)
-		if err != nil {
-			log.Printf("Uploading parts of file error :i %s \n ", err)
-			os.Exit(1)
-		}
-	}
-	err = multi.Complete(parts)
-
-	if err != nil{
-		log.Printf("Error completing parts %s", err)
-		os.Exit(1)
-	}
-	return
-}
-
-func magicPut(config runningConfig, bucket S3Bucket) {
-	// open the file to be transferred
-	file, err := os.Open(config.cmdParams[0])
-	reportError("Caught an error opening the local file %s", config.cmdParams[0], err)
-
-	defer file.Close()
-
-	fileInfo, err := file.Stat()
-	reportError("Caught an error determining the stats of the file %s", config.cmdParams[0], err)
 
 	bytes := make([]byte, chunkSize)
 	buffer := bufio.NewReader(file)
 	// at most, buffer.Read can only read len(bytes) bytes
-	_, err := buffer.Read(bytes)
+	_, err = buffer.Read(bytes)
 	reportError("Had an issue reading bytes from the local file %s", config.cmdParams[0], err)
 
 	// determine the filetype based on the bytes you read
@@ -256,11 +201,11 @@ func magicPut(config runningConfig, bucket S3Bucket) {
 	reportError("Had an issue opening the remote file %s for writing", config.cmdParams[1], err)
 
 	// upload all of the file in pieces
-	parts, err := multi.PutAll(file, chunkSize)
+	parts, err := multiUploader.PutAll(file, chunkSize)
 	reportError("Had an issue putting chunks in the remote file %s", config.cmdParams[1], err)
 
 	// complete the file
-	err = multi.Complete(parts)
+	err = multiUploader.Complete(parts)
 	reportError("Issue completing the file %s in the bucket", config.cmdParams[1], err)
 
 	return
