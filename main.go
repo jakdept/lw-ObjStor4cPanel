@@ -9,6 +9,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -180,7 +181,7 @@ func magicGet(config runningConfig, bucket s3.Bucket) {
 	reportError("Caught an error loading the remote file %s", config.cmdParams[0], err)
 
 	// copy all bytes, without loading stuff in memory, then defer close happen
-	_, err := io.Copy(out, dataResponse.Body)
+	_, err = io.Copy(outFile, dataResponse.Body)
 	reportError("Caught an writing the local file %s", config.cmdParams[1], err)
 }
 
