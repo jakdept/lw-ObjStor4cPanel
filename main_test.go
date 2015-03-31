@@ -17,7 +17,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Printf("Failed to load my test configuration file at testConfig.json - %s", err)
 	}
-	err = json.Unmarshal(configContents, testingConfig)
+	err = json.Unmarshal(configContents, &testingConfig)
 	if err != nil {
 		log.Printf("Failed to load my test configuration file at testConfig.json - %s", err)
 	}
