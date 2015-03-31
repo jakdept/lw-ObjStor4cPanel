@@ -1,5 +1,7 @@
 {
   "pwd": "/",
   "accessKey": "accessKey",
-  "secretKey": "secretKey"
+  "secretKey": "secretKey",
+  "bucketName": "bucketName",
+  "URL": "https://objects.liquidweb.services"
 }
