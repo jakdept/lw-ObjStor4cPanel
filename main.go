@@ -114,9 +114,9 @@ func callFunc(config runningConfig, bucket s3.Bucket) {
 
 	switch config.command {
 	case "get":
-		get(config, bucket)
+		magicGet(config, bucket)
 	case "put":
-		put(config, bucket)
+		magicPut(config, bucket)
 	case "ls":
 		ls(config, bucket)
 	case "mkdir":
