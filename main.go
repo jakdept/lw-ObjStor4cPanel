@@ -12,13 +12,13 @@ import (
 	"log"
 	"os"
 	"bufio"
-	"http"
+	"net/http"
 
 	"github.com/mitchellh/goamz/aws"
 	"github.com/mitchellh/goamz/s3"
 )
 
-const contentType = "binary/octet-stream"
+const contentType = "application/octet-stream"
 
 const pagesize = 1000
 
@@ -180,7 +180,7 @@ func put(config runningConfig, bucket s3.Bucket) {
 
 // puts a file from the local location to a remote location by pieces
 // cli: `binary` `put` `pwd `local file` `remote file` `bucketName` `username`
-func magicPut(config runningConfig, bucket S3Bucket) {
+func examplePut(config runningConfig, bucket S3Bucket) {
 	// open the file to be transferred
 	file, err := os.Open(config.cmdParams[0])
 	reportError("Caught an error opening the local file %s", config.cmdParams[0], err)
@@ -193,6 +193,7 @@ func magicPut(config runningConfig, bucket S3Bucket) {
 	bytes := make([]byte, fileSize)
 
 	buffer := bufio.NewReader(file)
+	// at most, buffer.Read can only read len(bytes) bytes
 	_, err = buffer.Read(bytes)
 
 	// determine the filetype
@@ -228,6 +229,40 @@ func magicPut(config runningConfig, bucket S3Bucket) {
 		log.Printf("Error completing parts %s", err)
 		os.Exit(1)
 	}
+	return
+}
+
+func magicPut(config runningConfig, bucket S3Bucket) {
+	// open the file to be transferred
+	file, err := os.Open(config.cmdParams[0])
+	reportError("Caught an error opening the local file %s", config.cmdParams[0], err)
+
+	defer file.Close()
+
+	fileInfo, err := file.Stat()
+	reportError("Caught an error determining the stats of the file %s", config.cmdParams[0], err)
+
+	bytes := make([]byte, chunkSize)
+	buffer := bufio.NewReader(file)
+	// at most, buffer.Read can only read len(bytes) bytes
+	_, err := buffer.Read(bytes)
+	reportError("Had an issue reading bytes from the local file %s", config.cmdParams[0], err)
+
+	// determine the filetype based on the bytes you read
+	filetype := http.DetectContentType(bytes)
+
+	// set up for multipart upload
+	multiUploader, err := bucket.InitMulti(config.cmdParams[1], filetype, s3.ACL("private"))
+	reportError("Had an issue opening the remote file %s for writing", config.cmdParams[1], err)
+
+	// upload all of the file in pieces
+	parts, err := multi.PutAll(file, chunkSize)
+	reportError("Had an issue putting chunks in the remote file %s", config.cmdParams[1], err)
+
+	// complete the file
+	err = multi.Complete(parts)
+	reportError("Issue completing the file %s in the bucket", config.cmdParams[1], err)
+
 	return
 }
 
