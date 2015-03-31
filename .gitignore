@@ -20,6 +20,7 @@ _cgo_export.*
 _testmain.go
 
 config.json
+testConfig.json
 
 *.exe
 *.test

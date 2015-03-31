@@ -28,7 +28,7 @@ const chunkSize = 33554432 // 32M in bytes
 type runningConfig struct {
 	command   string
 	pwd       string
-	host      string
+	bucket    string
 	cmdParams []string
 	accessKey string
 	secretKey string
@@ -37,10 +37,10 @@ type runningConfig struct {
 func getConfig() runningConfig {
 	config := new(runningConfig)
 	// parameters are passed as:
-	// binary command pwd [cmdParams ...] host accessKey
+	// binary command pwd [cmdParams ...] bucket accessKey
 	config.command = os.Args[1]
 	//pwd := os.Args[2]
-	config.host = os.Args[len(os.Args)-2]
+	config.bucket = os.Args[len(os.Args)-2]
 	config.accessKey = os.Args[len(os.Args)-1]
 
 	config.cmdParams = os.Args[3 : len(os.Args)-2]
@@ -51,27 +51,16 @@ func getConfig() runningConfig {
 	return *config
 }
 
-// ## TODO remove this stuff once you're sure you do not need it
-/*
-var (
-	Bucket  s3.Bucket
-	command string
-	//pwd                  string
-	cmdParams, host      string
-	accessKey, secretKey string
-)
-*/
-
-func createBucket(config runningConfig) s3.Bucket {
+func SetupConnection(config runningConfig) *s3.S3 {
 
 	// set up the required bucket
 	bucketRegion := aws.Region{
 		"LiquidWeb", //Name
 		"",          //EC2Endpoint
-		"",          //S3Endpoint
+		"https://objects.liquidweb.services", //S3Endpoint
 		"https://objects.liquidweb.services", //S3BucketEndpoint
-		true, //S3LocationConstraint
-		true, //S3LowercaseBucket
+		true,  //S3LocationConstraint
+		false, //S3LowercaseBucket
 		"https://objects.liquidweb.services", //SDBEndpoint
 		"", //SNSEndpoint
 		"", //SQSEndpoint
@@ -85,10 +74,13 @@ func createBucket(config runningConfig) s3.Bucket {
 	bucketAuth := new(aws.Auth)
 	bucketAuth.AccessKey = config.accessKey
 	bucketAuth.SecretKey = config.secretKey
-	//	bucketAuth := aws.Auth{accessKey, secretKey}
 
-	connection := s3.New(*bucketAuth, bucketRegion)
-	bucket := *connection.Bucket(config.host)
+	return s3.New(*bucketAuth, bucketRegion)
+}
+
+func createBucket(config runningConfig, connection s3.S3) s3.Bucket {
+
+	bucket := *connection.Bucket(config.bucket)
 
 	return bucket
 }
@@ -97,7 +89,9 @@ func main() {
 
 	config := getConfig()
 
-	bucket := createBucket(config)
+	connection := SetupConnection(config)
+
+	bucket := createBucket(config, *connection)
 
 	callFunc(config, bucket)
 }
