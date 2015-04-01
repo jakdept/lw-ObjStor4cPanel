@@ -78,22 +78,25 @@ func SetupConnection(config runningConfig) *s3.S3 {
 	return s3.New(*bucketAuth, bucketRegion)
 }
 
+func ValidBucket(connection *s3.S3, config runningConfig) bool {
+	allBuckets, err := connection.ListBuckets()
+	reportError("Could not retrieve buckets from %s", "objstor", err)
+
+	bucketExists := false
+
+	for _, bucket := range allBuckets.Buckets {
+		if bucket.Name == config.bucket {
+			bucketExists = true
+		}
+	}
+	return bucketExists
+}
+
 func createBucket(config runningConfig, connection s3.S3) s3.Bucket {
 
 	bucket := *connection.Bucket(config.bucket)
 
 	return bucket
-}
-
-func main() {
-
-	config := getConfig()
-
-	connection := SetupConnection(config)
-
-	bucket := createBucket(config, *connection)
-
-	callFunc(config, bucket)
 }
 
 /*
@@ -102,7 +105,6 @@ type map[string]commandFunc interface {
 	run(args []string)
 }
 */
-
 func callFunc(config runningConfig, bucket s3.Bucket) {
 	// call the function with the name of the command that you got
 
@@ -269,4 +271,15 @@ func rmdir(config runningConfig, bucket s3.Bucket) {
 func delete(config runningConfig, bucket s3.Bucket) {
 	err := bucket.Del(config.cmdParams[0])
 	reportError("failed to delete file %s", config.cmdParams[0], err)
+}
+
+func main() {
+
+	config := getConfig()
+
+	connection := SetupConnection(config)
+
+	bucket := createBucket(config, *connection)
+
+	callFunc(config, bucket)
 }
