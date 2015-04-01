@@ -32,3 +32,9 @@ func TestSetupConnection(t *testing.T) {
 
 	assert.Equal(t, connection.Region.S3Endpoint, "https://objects.liquidweb.services", "the URL should be LW's")
 }
+
+func TestListBuckets(t *testing.T) {
+	connection := SetupConnection(testingConfig)
+
+	assert.True(t, ValidBucket(connection, testingConfig), "the bucket should exist within the given space")
+}
