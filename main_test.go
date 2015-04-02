@@ -28,20 +28,20 @@ func loadTestingConfig(data []byte) runningConfig {
 //}
 func TestLoadTestingConfig(t *testing.T) {
 	//configData := new([]byte)
-	//configData = `{"pwd":"/", "accessKey": "AccEssKey", "secretKey": "SecRetKey", "bucket": "BuKKiT"}`
-	configData := []byte(`{"pwd":"/", "accessKey": "AccEssKey", "secretKey": "SecRetKey", "bucket": "BuKKiT"}`)
+	//configData = `{"pwd":"/", "AccessKey": "AccEssKey", "SecretKey": "SecRetKey", "bucket": "BuKKiT"}`
+	configData := []byte(`{"pwd":"/", "AccessKey": "AccEssKey", "SecretKey": "SecRetKey", "bucket": "BuKKiT"}`)
 	testingConfig := loadTestingConfig(configData)
 
 	//assert.Equal(t, "runningConfig", string(reflect.TypeOf(testingConfig)), "the config should be of type runningConfig")
-	assert.Equal(t, "AccEssKey", testingConfig.accessKey, "the Access Key should be the same in the config")
-	assert.Equal(t, "SecRetKey", testingConfig.secretKey, "the Secret Key should be the same in the config")
+	assert.Equal(t, "AccEssKey", testingConfig.AccessKey, "the Access Key should be the same in the config")
+	assert.Equal(t, "SecRetKey", testingConfig.SecretKey, "the Secret Key should be the same in the config")
 	assert.Equal(t, "/", testingConfig.pwd, "the pwd should be the same in the conf")
 }
 
 func TestSetupConnection(t *testing.T) {
 	//configData := new([]byte)
-	//configData = `{"pwd":"/", "accessKey": "AccEssKey", "secretKey": "SecRetKey", "bucket": "BuKKiT"}`
-	configData := []byte(`{"pwd":"/", "accessKey": "AccEssKey", "secretKey": "SecRetKey", "bucket": "BuKKiT"}`)
+	//configData = `{"pwd":"/", "AccessKey": "AccEssKey", "SecretKey": "SecRetKey", "bucket": "BuKKiT"}`
+	configData := []byte(`{"pwd":"/", "AccessKey": "AccEssKey", "SecretKey": "SecRetKey", "bucket": "BuKKiT"}`)
 	testingConfig := loadTestingConfig(configData)
 
 	connection := SetupConnection(testingConfig)
@@ -53,17 +53,17 @@ func TestSetupConnection(t *testing.T) {
 
 /*
 func TestSetupConnection(t *testing.T) {
-	testingConfig := loadTestingConfig(`{"pwd":"/", "accessKey": "AccEssKey", "secretKey": "SecRetKey", "bucket": "stuff"}`)
+	testingConfig := loadTestingConfig(`{"pwd":"/", "AccessKey": "AccEssKey", "SecretKey": "SecRetKey", "bucket": "stuff"}`)
 
 	log.Println(reflect.TypeOf(testingConfig))
-	log.Println(reflect.TypeOf(testingConfig.accessKey))
-	log.Println(testingConfig.accessKey)
+	log.Println(reflect.TypeOf(testingConfig.AccessKey))
+	log.Println(testingConfig.AccessKey)
 	//assert.Equal(t, runningConfig, testingConfig.(type), "the config is of the wrong type")
 	//testingConfig.(type)
 
 	connection := SetupConnection(testingConfig)
-	assert.Equal(t, testingConfig.accessKey, connection.Auth.AccessKey, "the Access Key should be the same")
-	assert.Equal(t, testingConfig.secretKey, connection.Auth.SecretKey, "the Secret Key should be the same")
+	assert.Equal(t, testingConfig.AccessKey, connection.Auth.AccessKey, "the Access Key should be the same")
+	assert.Equal(t, testingConfig.SecretKey, connection.Auth.SecretKey, "the Secret Key should be the same")
 
 	assert.Equal(t, "https://objects.liquidweb.services", connection.Region.S3Endpoint, "the URL should be LW's")
 }
