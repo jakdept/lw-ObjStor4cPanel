@@ -28,35 +28,35 @@ const pagesize = 1000
 const chunkSize = 33554432 // 32M in bytes
 
 type runningConfig struct {
-	command   string
-	pwd       string
-	bucket    string
-	cmdParams []string
-	accessKey string
-	secretKey string
+	Command   string
+	Pwd       string
+	Bucket    string
+	CmdParams []string
+	AccessKey string
+	SecretKey string
 }
 
-func getConfig() *runningConfig {
+func getConfig() runningConfig {
 	config := new(runningConfig)
 	// parameters are passed as:
-	// binary command pwd [cmdParams ...] bucket accessKey
-	config.command = os.Args[1]
-	//pwd := os.Args[2]
-	config.bucket = os.Args[len(os.Args)-2]
-	config.accessKey = os.Args[len(os.Args)-1]
+	// binary Command Pwd [CmdParams ...] Bucket AccessKey
+	config.Command = os.Args[1]
+	//Pwd := os.Args[2]
+	config.Bucket = os.Args[len(os.Args)-2]
+	config.AccessKey = os.Args[len(os.Args)-1]
 
-	config.cmdParams = os.Args[3 : len(os.Args)-2]
+	config.CmdParams = os.Args[3 : len(os.Args)-2]
 
-	// secretKey is passed via enviroment variable
-	config.secretKey = os.Getenv("PASSWORD")
+	// SecretKey is passed via enviroment variable
+	config.SecretKey = os.Getenv("PASSWORD")
 
-	return config
+	return *config
 }
 
-func SetupConnection(config *runningConfig) *s3.S3 {
+func SetupConnection(config runningConfig) *s3.S3 {
 
 	/*
-		// set up the required bucket
+		// set up the required Bucket
 		bucketRegion := aws.Region{
 			"LiquidWeb", //Name
 			"",          //EC2Endpoint
@@ -78,29 +78,30 @@ func SetupConnection(config *runningConfig) *s3.S3 {
 	bucketRegion := aws.Region{
 		Name:       "liquidweb",
 		S3Endpoint: "https://objects.liquidweb.services",
+		//S3Endpoint: config.url,
 	}
 
 	//bucketAuth := new(aws.Auth)
-	//bucketAuth.AccessKey = config.accessKey
-	//bucketAuth.SecretKey = config.secretKey
+	//bucketAuth.AccessKey = config.AccessKey
+	//bucketAuth.SecretKey = config.SecretKey
 
-	bucketAuth, err := aws.GetAuth(config.accessKey, config.secretKey)
+	bucketAuth, err := aws.GetAuth(config.AccessKey, config.SecretKey)
 
 	//fmt.Printf("The script has the AccessKey %s", bucketAuth.AccessKey)
 
-	reportError("Ran into a problem creating the authentication with accessKey %s", config.accessKey, err)
+	reportError("Ran into a problem creating the authentication with AccessKey %s", config.AccessKey, err)
 
 	return s3.New(bucketAuth, bucketRegion)
 }
 
-func ValidBucket(connection *s3.S3, config *runningConfig) bool {
+func ValidBucket(config runningConfig, connection *s3.S3) bool {
 	allBuckets, err := connection.ListBuckets()
 	reportError("Could not retrieve buckets from %s", "objstor", err)
 
 	bucketExists := false
 
-	for _, bucket := range allBuckets.Buckets {
-		if bucket.Name == config.bucket {
+	for _, Bucket := range allBuckets.Buckets {
+		if Bucket.Name == config.Bucket {
 			bucketExists = true
 		}
 	}
@@ -109,9 +110,9 @@ func ValidBucket(connection *s3.S3, config *runningConfig) bool {
 
 func SetupBucket(config runningConfig, connection s3.S3) s3.Bucket {
 
-	bucket := *connection.Bucket(config.bucket)
+	Bucket := *connection.Bucket(config.Bucket)
 
-	return bucket
+	return Bucket
 }
 
 /*
@@ -120,24 +121,24 @@ type map[string]commandFunc interface {
 	run(args []string)
 }
 */
-func callFunc(config runningConfig, bucket s3.Bucket) {
-	// call the function with the name of the command that you got
+func callFunc(config runningConfig, Bucket s3.Bucket) {
+	// call the function with the name of the Command that you got
 
-	switch config.command {
+	switch config.Command {
 	case "get":
-		magicGet(config, bucket)
+		magicGet(config, Bucket)
 	case "put":
-		magicPut(config, bucket)
+		magicPut(config, Bucket)
 	case "ls":
-		ls(config, bucket)
+		ls(config, Bucket)
 	case "mkdir":
-		mkdir(config, bucket)
+		mkdir(config, Bucket)
 	case "chdir":
-		chdir(config, bucket)
+		chdir(config, Bucket)
 	case "rmdir":
-		rmdir(config, bucket)
+		rmdir(config, Bucket)
 	case "delete":
-		delete(config, bucket)
+		delete(config, Bucket)
 	}
 
 	// ## TODO - setting up a function map for all of the functions to call
@@ -156,7 +157,7 @@ func callFunc(config runningConfig, bucket s3.Bucket) {
 			"delete": delete,
 		}
 
-		cmdFuncs[command].run(cmdParams)
+		cmdFuncs[Command].run(CmdParams)
 	*/
 }
 
@@ -170,80 +171,80 @@ func reportError(message string, messageSub string, err error) {
 }
 
 // Gets a file from the remote location and puts it on the local system
-// cli: `binary` `get` `pwd `Remote file` `local file` `bucketName` `username`
+// cli: `binary` `get` `Pwd `Remote file` `local file` `bucketName` `username`
 // passed to this is ["remote file", "local file"]
-func get(config runningConfig, bucket s3.Bucket) {
+func get(config runningConfig, Bucket s3.Bucket) {
 	//data := new(Buffer)
-	data, err := bucket.Get(config.cmdParams[0])
-	reportError("Caught an error loading the remote file %s", config.cmdParams[0], err)
-	err = ioutil.WriteFile(config.cmdParams[1], data, 0644)
-	reportError("Caught an writing the local file %s", config.cmdParams[1], err)
+	data, err := Bucket.Get(config.CmdParams[0])
+	reportError("Caught an error loading the remote file %s", config.CmdParams[0], err)
+	err = ioutil.WriteFile(config.CmdParams[1], data, 0644)
+	reportError("Caught an writing the local file %s", config.CmdParams[1], err)
 }
 
-func magicGet(config runningConfig, bucket s3.Bucket) {
+func magicGet(config runningConfig, Bucket s3.Bucket) {
 	// open up the output file for writing
-	outFile, err := os.Create(config.cmdParams[1])
+	outFile, err := os.Create(config.CmdParams[1])
 	defer outFile.Close()
-	reportError("Caught an writing the local file %s", config.cmdParams[1], err)
+	reportError("Caught an writing the local file %s", config.CmdParams[1], err)
 
 	// open up the remote file for reading
-	dataResponse, err := bucket.GetResponse(config.cmdParams[0])
+	dataResponse, err := Bucket.GetResponse(config.CmdParams[0])
 	defer dataResponse.Body.Close()
-	reportError("Caught an error loading the remote file %s", config.cmdParams[0], err)
+	reportError("Caught an error loading the remote file %s", config.CmdParams[0], err)
 
 	// copy all bytes, without loading stuff in memory, then defer close happen
 	_, err = io.Copy(outFile, dataResponse.Body)
-	reportError("Caught an writing the local file %s", config.cmdParams[1], err)
+	reportError("Caught an writing the local file %s", config.CmdParams[1], err)
 }
 
 // puts a file from the local location to a remote location
-// cli: `binary` `put` `pwd `local file` `remote file` `bucketName` `username`
-func put(config runningConfig, bucket s3.Bucket) {
+// cli: `binary` `put` `Pwd `local file` `remote file` `bucketName` `username`
+func put(config runningConfig, Bucket s3.Bucket) {
 	//data := new(Buffer)
-	data, err := ioutil.ReadFile(config.cmdParams[0])
-	reportError("Caught an error loading the local file %s", config.cmdParams[0], err)
-	err = bucket.Put(config.cmdParams[1], data, contentType, "0644")
-	reportError("Caught an error saving the remote file %s", config.cmdParams[1], err)
+	data, err := ioutil.ReadFile(config.CmdParams[0])
+	reportError("Caught an error loading the local file %s", config.CmdParams[0], err)
+	err = Bucket.Put(config.CmdParams[1], data, contentType, "0644")
+	reportError("Caught an error saving the remote file %s", config.CmdParams[1], err)
 }
 
 // puts a file from the local location to a remote location by pieces
-// cli: `binary` `put` `pwd `local file` `remote file` `bucketName` `username`
-func magicPut(config runningConfig, bucket s3.Bucket) {
+// cli: `binary` `put` `Pwd `local file` `remote file` `bucketName` `username`
+func magicPut(config runningConfig, Bucket s3.Bucket) {
 	// open the file to be transferred
-	file, err := os.Open(config.cmdParams[0])
+	file, err := os.Open(config.CmdParams[0])
 	defer file.Close()
-	reportError("Caught an error opening the local file %s", config.cmdParams[0], err)
+	reportError("Caught an error opening the local file %s", config.CmdParams[0], err)
 
 	bytes := make([]byte, chunkSize)
 	buffer := bufio.NewReader(file)
 	// at most, buffer.Read can only read len(bytes) bytes
 	_, err = buffer.Read(bytes)
-	reportError("Had an issue reading bytes from the local file %s", config.cmdParams[0], err)
+	reportError("Had an issue reading bytes from the local file %s", config.CmdParams[0], err)
 
 	// determine the filetype based on the bytes you read
 	filetype := http.DetectContentType(bytes)
 
 	// set up for multipart upload
-	multiUploader, err := bucket.InitMulti(config.cmdParams[1], filetype, s3.ACL("private"))
-	reportError("Had an issue opening the remote file %s for writing", config.cmdParams[1], err)
+	multiUploader, err := Bucket.InitMulti(config.CmdParams[1], filetype, s3.ACL("private"))
+	reportError("Had an issue opening the remote file %s for writing", config.CmdParams[1], err)
 
 	// upload all of the file in pieces
 	parts, err := multiUploader.PutAll(file, chunkSize)
-	reportError("Had an issue putting chunks in the remote file %s", config.cmdParams[1], err)
+	reportError("Had an issue putting chunks in the remote file %s", config.CmdParams[1], err)
 
 	// complete the file
 	err = multiUploader.Complete(parts)
-	reportError("Issue completing the file %s in the bucket", config.cmdParams[1], err)
+	reportError("Issue completing the file %s in the Bucket", config.CmdParams[1], err)
 
 	return
 }
 
 // lists the content of a directory on the remote system
-// cli: `binary` `ls` `pwd` `path` `bucketName` `username`
+// cli: `binary` `ls` `Pwd` `path` `bucketName` `username`
 // passed to this is ["path"]
-func ls(config runningConfig, bucket s3.Bucket) {
-	items, err := bucket.List(config.cmdParams[0], "", "", pagesize)
-	reportError("Failed listing contents of the Bucket behind the path %s", config.cmdParams[0], err)
+func ls(config runningConfig, Bucket s3.Bucket) {
+	items, err := Bucket.List(config.CmdParams[0], "", "", pagesize)
+	reportError("Failed listing contents of the Bucket behind the path %s", config.CmdParams[0], err)
 	for _, target := range items.Contents {
 		// prints out in the format defined by:
 		// "-rwxr-xr-1 root root 3171 Jan 18 12:23 temp.txt"
@@ -253,39 +254,39 @@ func ls(config runningConfig, bucket s3.Bucket) {
 }
 
 // does nothing - making of directories is not required, but is required for cPanel transport
-// cli: `binary` `mkdir` `pwd` `path` `bucketName` `username`
-func mkdir(config runningConfig, bucket s3.Bucket) {
+// cli: `binary` `mkdir` `Pwd` `path` `bucketName` `username`
+func mkdir(config runningConfig, Bucket s3.Bucket) {
 	return
 }
 
 // does almost nothing - not required, but must return the path
-// cli: `binary` `chdir` `pwd` `path` `bucketName` `username`
-func chdir(config runningConfig, bucket s3.Bucket) {
-	_, err := fmt.Println(config.cmdParams[0])
-	reportError("failed to print the given path %s", config.cmdParams[0], err)
+// cli: `binary` `chdir` `Pwd` `path` `bucketName` `username`
+func chdir(config runningConfig, Bucket s3.Bucket) {
+	_, err := fmt.Println(config.CmdParams[0])
+	reportError("failed to print the given path %s", config.CmdParams[0], err)
 }
 
-// removes everything under the given path on the remote bucket
-// cli: `binary` `rmdir` `pwd` `path` `bucketName` `username`
+// removes everything under the given path on the remote Bucket
+// cli: `binary` `rmdir` `Pwd` `path` `bucketName` `username`
 // passed to this is ["path"]
-func rmdir(config runningConfig, bucket s3.Bucket) {
-	items, err := bucket.List(config.cmdParams[0], "", "", pagesize)
-	reportError("Failed listing contents of the Bucket behind the path %s", config.cmdParams[0], err)
+func rmdir(config runningConfig, Bucket s3.Bucket) {
+	items, err := Bucket.List(config.CmdParams[0], "", "", pagesize)
+	reportError("Failed listing contents of the Bucket behind the path %s", config.CmdParams[0], err)
 	for len(items.Contents) > 0 {
 		for _, target := range items.Contents {
-			err = bucket.Del(target.Key)
+			err = Bucket.Del(target.Key)
 			reportError("Failed removing the target %s from the Bucket", target.Key, err)
 		}
-		items, _ = bucket.List(config.cmdParams[0], "", "", pagesize)
+		items, _ = Bucket.List(config.CmdParams[0], "", "", pagesize)
 	}
 }
 
 // removes a file at a given location
-// cli: `delete` `rmdir` `pwd` `path` `bucketName` `username`
+// cli: `delete` `rmdir` `Pwd` `path` `bucketName` `username`
 // passed to this is ["path"]
-func delete(config runningConfig, bucket s3.Bucket) {
-	err := bucket.Del(config.cmdParams[0])
-	reportError("failed to delete file %s", config.cmdParams[0], err)
+func delete(config runningConfig, Bucket s3.Bucket) {
+	err := Bucket.Del(config.CmdParams[0])
+	reportError("failed to delete file %s", config.CmdParams[0], err)
 }
 
 func main() {
@@ -293,7 +294,7 @@ func main() {
 	config := getConfig()
 
 	connection := SetupConnection(config)
-	bucket := SetupBucket(*config, *connection)
+	Bucket := SetupBucket(config, *connection)
 
-	callFunc(*config, bucket)
+	callFunc(config, Bucket)
 }
