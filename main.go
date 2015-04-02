@@ -17,6 +17,8 @@ import (
 
 	"github.com/mitchellh/goamz/aws"
 	"github.com/mitchellh/goamz/s3"
+	// "gopkg.in/amz.v1/aws"
+	// "gopkg.in/amz.v1/s3"
 )
 
 const contentType = "application/octet-stream"
@@ -34,7 +36,7 @@ type runningConfig struct {
 	secretKey string
 }
 
-func getConfig() runningConfig {
+func getConfig() *runningConfig {
 	config := new(runningConfig)
 	// parameters are passed as:
 	// binary command pwd [cmdParams ...] bucket accessKey
@@ -48,37 +50,50 @@ func getConfig() runningConfig {
 	// secretKey is passed via enviroment variable
 	config.secretKey = os.Getenv("PASSWORD")
 
-	return *config
+	return config
 }
 
-func SetupConnection(config runningConfig) *s3.S3 {
+func SetupConnection(config *runningConfig) *s3.S3 {
 
-	// set up the required bucket
+	/*
+		// set up the required bucket
+		bucketRegion := aws.Region{
+			"LiquidWeb", //Name
+			"",          //EC2Endpoint
+			"https://objects.liquidweb.services", //S3Endpoint
+			"https://objects.liquidweb.services", //S3BucketEndpoint
+			false, //S3LocationConstraint
+			false, //S3LowercaseBucket
+			"https://objects.liquidweb.services", //SDBEndpoint
+			"", //SNSEndpoint
+			"", //SQSEndpoint
+			"", //IAMEndpoint
+			"", //ELBEndpoint
+			"", //AutoScalingEndpoint
+			"", //RdsEndpoint
+			"", //RouteS3Endpoint
+		}
+	*/
+
 	bucketRegion := aws.Region{
-		"LiquidWeb", //Name
-		"",          //EC2Endpoint
-		"https://objects.liquidweb.services", //S3Endpoint
-		"https://objects.liquidweb.services", //S3BucketEndpoint
-		true,  //S3LocationConstraint
-		false, //S3LowercaseBucket
-		"https://objects.liquidweb.services", //SDBEndpoint
-		"", //SNSEndpoint
-		"", //SQSEndpoint
-		"", //IAMEndpoint
-		"", //ELBEndpoint
-		"", //AutoScalingEndpoint
-		"", //RdsEndpoint
-		"", //RouteS3Endpoint
+		Name:       "liquidweb",
+		S3Endpoint: "https://objects.liquidweb.services",
 	}
 
-	bucketAuth := new(aws.Auth)
-	bucketAuth.AccessKey = config.accessKey
-	bucketAuth.SecretKey = config.secretKey
+	//bucketAuth := new(aws.Auth)
+	//bucketAuth.AccessKey = config.accessKey
+	//bucketAuth.SecretKey = config.secretKey
 
-	return s3.New(*bucketAuth, bucketRegion)
+	bucketAuth, err := aws.GetAuth(config.accessKey, config.secretKey)
+
+	//fmt.Printf("The script has the AccessKey %s", bucketAuth.AccessKey)
+
+	reportError("Ran into a problem creating the authentication with accessKey %s", config.accessKey, err)
+
+	return s3.New(bucketAuth, bucketRegion)
 }
 
-func ValidBucket(connection *s3.S3, config runningConfig) bool {
+func ValidBucket(connection *s3.S3, config *runningConfig) bool {
 	allBuckets, err := connection.ListBuckets()
 	reportError("Could not retrieve buckets from %s", "objstor", err)
 
@@ -92,7 +107,7 @@ func ValidBucket(connection *s3.S3, config runningConfig) bool {
 	return bucketExists
 }
 
-func createBucket(config runningConfig, connection s3.S3) s3.Bucket {
+func SetupBucket(config runningConfig, connection s3.S3) s3.Bucket {
 
 	bucket := *connection.Bucket(config.bucket)
 
@@ -278,8 +293,7 @@ func main() {
 	config := getConfig()
 
 	connection := SetupConnection(config)
+	bucket := SetupBucket(*config, *connection)
 
-	bucket := createBucket(config, *connection)
-
-	callFunc(config, bucket)
+	callFunc(*config, bucket)
 }
