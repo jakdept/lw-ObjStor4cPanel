@@ -54,40 +54,13 @@ func getConfig() runningConfig {
 }
 
 func SetupConnection(config runningConfig) *s3.S3 {
-
-	/*
-		// set up the required Bucket
-		bucketRegion := aws.Region{
-			"LiquidWeb", //Name
-			"",          //EC2Endpoint
-			"https://objects.liquidweb.services", //S3Endpoint
-			"https://objects.liquidweb.services", //S3BucketEndpoint
-			false, //S3LocationConstraint
-			false, //S3LowercaseBucket
-			"https://objects.liquidweb.services", //SDBEndpoint
-			"", //SNSEndpoint
-			"", //SQSEndpoint
-			"", //IAMEndpoint
-			"", //ELBEndpoint
-			"", //AutoScalingEndpoint
-			"", //RdsEndpoint
-			"", //RouteS3Endpoint
-		}
-	*/
-
 	bucketRegion := aws.Region{
 		Name:       "liquidweb",
 		S3Endpoint: "https://objects.liquidweb.services",
 		//S3Endpoint: config.url,
 	}
 
-	//bucketAuth := new(aws.Auth)
-	//bucketAuth.AccessKey = config.AccessKey
-	//bucketAuth.SecretKey = config.SecretKey
-
 	bucketAuth, err := aws.GetAuth(config.AccessKey, config.SecretKey)
-
-	//fmt.Printf("The script has the AccessKey %s", bucketAuth.AccessKey)
 
 	reportError("Ran into a problem creating the authentication with AccessKey %s", config.AccessKey, err)
 
