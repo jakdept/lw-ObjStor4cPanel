@@ -98,7 +98,7 @@ func callFunc(config runningConfig, Bucket s3.Bucket) {
 	case "mkdir":
 		mkdir(config, Bucket)
 	case "chdir":
-		chdir(config, Bucket)
+		Chdir(config, Bucket)
 	case "rmdir":
 		rmdir(config, Bucket)
 	case "delete":
@@ -113,6 +113,13 @@ func reportError(message string, messageSub string, err error) {
 		os.Exit(1)
 	}
 	return
+}
+
+// does almost nothing - not required, but must return the path
+// cli: `binary` `chdir` `Pwd` `path` `bucketName` `username`
+func Chdir(config runningConfig, Bucket s3.Bucket) {
+	_, err := fmt.Println(config.CmdParams[0])
+	reportError("failed to print the given path %s", config.CmdParams[0], err)
 }
 
 // Gets a file from the remote location and puts it on the local system
@@ -196,13 +203,6 @@ func ls(config runningConfig, Bucket s3.Bucket) {
 		_, err = fmt.Printf("-rwxr-xr-1 %s %s %d Jan 18 12:23 %s", target.Owner, target.Owner, target.Size, target.Key)
 		reportError("Failed displaying the file %s", target.Key, err)
 	}
-}
-
-// does almost nothing - not required, but must return the path
-// cli: `binary` `chdir` `Pwd` `path` `bucketName` `username`
-func chdir(config runningConfig, Bucket s3.Bucket) {
-	_, err := fmt.Println(config.CmdParams[0])
-	reportError("failed to print the given path %s", config.CmdParams[0], err)
 }
 
 // removes everything under the given path on the remote Bucket
