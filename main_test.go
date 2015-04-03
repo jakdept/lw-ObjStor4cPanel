@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"github.com/stretchr/testify/assert"
-	"io/ioutil"
+	//"io/ioutil"
 	"log"
 	//"os"
 	//"reflect"
@@ -21,54 +21,41 @@ func loadTestingConfig(data []byte) runningConfig {
 	return *testingConfig
 }
 
-//func TestMain(m *testing.M) {
-//func init() {
-
-//os.Exit(m.Run()) // call all the tests in here and then exit
-//}
 func TestLoadTestingConfig(t *testing.T) {
-	//configData := new([]byte)
-	//configData = `{"pwd":"/", "AccessKey": "AccEssKey", "SecretKey": "SecRetKey", "bucket": "BuKKiT"}`
-	configData := []byte(`{"pwd":"/", "AccessKey": "AccEssKey", "SecretKey": "SecRetKey", "bucket": "BuKKiT"}`)
+	configData := []byte(`{"Pwd":"/", "AccessKey": "AccEssKey", "SecretKey": "SecRetKey", "Bucket": "BuKKiT"}`)
 	testingConfig := loadTestingConfig(configData)
 
-	//assert.Equal(t, "runningConfig", string(reflect.TypeOf(testingConfig)), "the config should be of type runningConfig")
 	assert.Equal(t, "AccEssKey", testingConfig.AccessKey, "the Access Key should be the same in the config")
 	assert.Equal(t, "SecRetKey", testingConfig.SecretKey, "the Secret Key should be the same in the config")
-	assert.Equal(t, "/", testingConfig.pwd, "the pwd should be the same in the conf")
+	assert.Equal(t, "/", testingConfig.Pwd, "the pwd should be the same in the conf")
+	assert.Equal(t, "BuKKiT", testingConfig.Bucket, "the pwd should be the same in the conf")
 }
 
 func TestSetupConnection(t *testing.T) {
-	//configData := new([]byte)
-	//configData = `{"pwd":"/", "AccessKey": "AccEssKey", "SecretKey": "SecRetKey", "bucket": "BuKKiT"}`
-	configData := []byte(`{"pwd":"/", "AccessKey": "AccEssKey", "SecretKey": "SecRetKey", "bucket": "BuKKiT"}`)
+	configData := []byte(`{"Pwd":"/", "AccessKey": "AccEssKey", "SecretKey": "SecRetKey", "Bucket": "BuKKiT"}`)
 	testingConfig := loadTestingConfig(configData)
-
 	connection := SetupConnection(testingConfig)
+
 	assert.Equal(t, "AccEssKey", connection.Auth.AccessKey, "the Access Key should be the same")
 	assert.Equal(t, "SecRetKey", connection.Auth.SecretKey, "the Secret Key should be the same")
-
 	assert.Equal(t, "https://objects.liquidweb.services", connection.Region.S3Endpoint, "the URL should be LW's")
+	assert.Equal(t, "liquidweb", connection.Region.Name, "the URL should be LW's")
+}
+
+func TestSetupBucket(t *testing.T) {
+	configData := []byte(`{"Pwd":"/", "AccessKey": "AccEssKey", "SecretKey": "SecRetKey", "Bucket": "BuKKiT"}`)
+	testingConfig := loadTestingConfig(configData)
+	connection := SetupConnection(testingConfig)
+	bucket := SetupBucket(testingConfig, *connection)
+
+	assert.Equal(t, "AccEssKey", bucket.S3.Auth.AccessKey, "the Access Key should be the same")
+	assert.Equal(t, "SecRetKey", bucket.S3.Auth.SecretKey, "the Secret Key should be the same")
+	assert.Equal(t, "https://objects.liquidweb.services", bucket.S3.Region.S3Endpoint, "the URL should be LW's")
+	assert.Equal(t, "liquidweb", bucket.S3.Region.Name, "the URL should be LW's")
+	assert.Equal(t, "BuKKiT", bucket.Name, "the name of the bucket is not being set correctly")
 }
 
 /*
-func TestSetupConnection(t *testing.T) {
-	testingConfig := loadTestingConfig(`{"pwd":"/", "AccessKey": "AccEssKey", "SecretKey": "SecRetKey", "bucket": "stuff"}`)
-
-	log.Println(reflect.TypeOf(testingConfig))
-	log.Println(reflect.TypeOf(testingConfig.AccessKey))
-	log.Println(testingConfig.AccessKey)
-	//assert.Equal(t, runningConfig, testingConfig.(type), "the config is of the wrong type")
-	//testingConfig.(type)
-
-	connection := SetupConnection(testingConfig)
-	assert.Equal(t, testingConfig.AccessKey, connection.Auth.AccessKey, "the Access Key should be the same")
-	assert.Equal(t, testingConfig.SecretKey, connection.Auth.SecretKey, "the Secret Key should be the same")
-
-	assert.Equal(t, "https://objects.liquidweb.services", connection.Region.S3Endpoint, "the URL should be LW's")
-}
-*/
-
 func TestValidBucket(t *testing.T) {
 	data, err := ioutil.ReadFile("testConfig.json")
 	if err != nil {
@@ -83,3 +70,5 @@ func TestValidBucket(t *testing.T) {
 
 	assert.True(t, ValidBucket(testingConfig, connection), "the bucket should exist within the given space")
 }
+
+*/
