@@ -3,9 +3,6 @@ package main
 // cPanel backup transport helper for Liquidweb Object Storage
 // By Jack Hayhurst
 
-// ## TODO buffering needs to be added for file uploads and downloads
-// https://www.socketloop.com/tutorials/golang-upload-big-file-larger-than-100mb-to-aws-s3-with-multipart-upload
-
 import (
 	"bufio"
 	"fmt"
@@ -88,12 +85,6 @@ func SetupBucket(config runningConfig, connection s3.S3) s3.Bucket {
 	return Bucket
 }
 
-/*
-// in case I want to try to go back to setting up a function map with reflection
-type map[string]commandFunc interface {
-	run(args []string)
-}
-*/
 func callFunc(config runningConfig, Bucket s3.Bucket) {
 	// call the function with the name of the Command that you got
 
@@ -113,25 +104,6 @@ func callFunc(config runningConfig, Bucket s3.Bucket) {
 	case "delete":
 		delete(config, Bucket)
 	}
-
-	// ## TODO - setting up a function map for all of the functions to call
-	// looks like this won't work without:
-	// https://bitbucket.org/mikespook/golib/src/27c65cdf8a77/funcmap/
-	// maybe read more here:
-	// http://blog.golang.org/laws-of-reflection
-	/*
-		cmdFuncs := map[string]commandFunc{}{
-			"get":    get,
-			"put":    put,
-			"ls":     ls,
-			"mkdir":  mkdir,
-			"chdir":  chdir,
-			"rmdir":  rmdir,
-			"delete": delete,
-		}
-
-		cmdFuncs[Command].run(CmdParams)
-	*/
 }
 
 func reportError(message string, messageSub string, err error) {
