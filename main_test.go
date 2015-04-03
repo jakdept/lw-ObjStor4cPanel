@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"github.com/stretchr/testify/assert"
-	//"io/ioutil"
+	"io/ioutil"
 	"log"
 	//"os"
 	//"reflect"
@@ -55,7 +55,22 @@ func TestSetupBucket(t *testing.T) {
 	assert.Equal(t, "BuKKiT", bucket.Name, "the name of the bucket is not being set correctly")
 }
 
-/*
+func TestHiddenConfig(t *testing.T) {
+	data, err := ioutil.ReadFile("testConfig.json")
+	if err != nil {
+		t.Error("failed to load my config file testConfig.json")
+	}
+	testingConfig := loadTestingConfig(data)
+	connection := SetupConnection(testingConfig)
+	bucket := SetupBucket(testingConfig, *connection)
+
+	assert.Equal(t, testingConfig.AccessKey, bucket.S3.Auth.AccessKey, "the Access Key should be the same")
+	assert.Equal(t, testingConfig.SecretKey, bucket.S3.Auth.SecretKey, "the Secret Key should be the same")
+	assert.Equal(t, testingConfig.Bucket, bucket.Name, "the name of the bucket is not being set correctly")
+	assert.Equal(t, "https://objects.liquidweb.services", bucket.S3.Region.S3Endpoint, "the URL should be LW's")
+	assert.Equal(t, "liquidweb", bucket.S3.Region.Name, "the URL should be LW's")
+}
+
 func TestValidBucket(t *testing.T) {
 	data, err := ioutil.ReadFile("testConfig.json")
 	if err != nil {
@@ -65,10 +80,8 @@ func TestValidBucket(t *testing.T) {
 	connection := SetupConnection(testingConfig)
 
 	_, err = connection.ListBuckets()
-
 	assert.Nil(t, err, "there should be no error listing the buckets")
 
-	assert.True(t, ValidBucket(testingConfig, connection), "the bucket should exist within the given space")
+	bucketExists := ValidBucket(testingConfig, connection)
+	assert.True(t, bucketExists, "the bucket should exist within the given space")
 }
-
-*/
