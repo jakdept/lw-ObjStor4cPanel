@@ -84,4 +84,31 @@ func TestValidBucket(t *testing.T) {
 
 	bucketExists := ValidBucket(testingConfig, connection)
 	assert.True(t, bucketExists, "the bucket should exist within the given space")
+
+	testingConfig.Bucket = "BadBucket"
+	bucketExists = ValidBucket(testingConfig, connection)
+	assert.False(t, bucketExists, "the BadBucket should not exist within the given space")
+}
+
+func ExampleChdir() {
+	data, err := ioutil.ReadFile("testConfig.json")
+	if err != nil {
+		return
+	}
+	testingConfig := loadTestingConfig(data)
+	connection := SetupConnection(testingConfig)
+	Bucket := SetupBucket(testingConfig, *connection)
+
+	testingConfig.CmdParams = []string{"/"}
+	Chdir(testingConfig, Bucket)
+
+	testingConfig.CmdParams[0] = "/harrymetsally"
+	Chdir(testingConfig, Bucket)
+
+	testingConfig.CmdParams[0] = "/harrymetsally/billysue"
+	Chdir(testingConfig, Bucket)
+	// Output:
+	// /
+	// /harrymetsally
+	// /harrymetsally/billysue
 }
