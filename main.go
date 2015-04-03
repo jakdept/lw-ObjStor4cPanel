@@ -198,12 +198,6 @@ func ls(config runningConfig, Bucket s3.Bucket) {
 	}
 }
 
-// does nothing - making of directories is not required, but is required for cPanel transport
-// cli: `binary` `mkdir` `Pwd` `path` `bucketName` `username`
-func mkdir(config runningConfig, Bucket s3.Bucket) {
-	return
-}
-
 // does almost nothing - not required, but must return the path
 // cli: `binary` `chdir` `Pwd` `path` `bucketName` `username`
 func chdir(config runningConfig, Bucket s3.Bucket) {
