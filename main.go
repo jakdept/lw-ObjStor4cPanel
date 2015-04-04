@@ -94,7 +94,7 @@ func callFunc(config runningConfig, Bucket s3.Bucket) {
 	case "put":
 		magicPut(config, Bucket)
 	case "ls":
-		ls(config, Bucket)
+		Lsdir(config, Bucket)
 	case "mkdir":
 	case "chdir":
 		Chdir(config, Bucket)
@@ -124,7 +124,7 @@ func Chdir(config runningConfig, Bucket s3.Bucket) {
 // lists the content of a directory on the remote system
 // cli: `binary` `ls` `Pwd` `path` `bucketName` `username`
 // passed to this is ["path"]
-func Ls(config runningConfig, Bucket s3.Bucket) {
+func Lsdir(config runningConfig, Bucket s3.Bucket) {
 	items, err := Bucket.List(config.CmdParams[0], "", "", pagesize)
 	reportError("Failed listing contents of the Bucket behind the path %s", config.CmdParams[0], err)
 	for _, target := range items.Contents {
