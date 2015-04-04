@@ -96,7 +96,6 @@ func callFunc(config runningConfig, Bucket s3.Bucket) {
 	case "ls":
 		ls(config, Bucket)
 	case "mkdir":
-		mkdir(config, Bucket)
 	case "chdir":
 		Chdir(config, Bucket)
 	case "rmdir":
@@ -120,6 +119,20 @@ func reportError(message string, messageSub string, err error) {
 func Chdir(config runningConfig, Bucket s3.Bucket) {
 	_, err := fmt.Println(config.CmdParams[0])
 	reportError("failed to print the given path %s", config.CmdParams[0], err)
+}
+
+// lists the content of a directory on the remote system
+// cli: `binary` `ls` `Pwd` `path` `bucketName` `username`
+// passed to this is ["path"]
+func Ls(config runningConfig, Bucket s3.Bucket) {
+	items, err := Bucket.List(config.CmdParams[0], "", "", pagesize)
+	reportError("Failed listing contents of the Bucket behind the path %s", config.CmdParams[0], err)
+	for _, target := range items.Contents {
+		// prints out in the format defined by:
+		// "-rwxr-xr-1 root root 3171 Jan 18 12:23 temp.txt"
+		_, err = fmt.Printf("-rwxr-xr-1 %s %s %d Jan 18 12:23 %s", target.Owner, target.Owner, target.Size, target.Key)
+		reportError("Failed displaying the file %s", target.Key, err)
+	}
 }
 
 // Gets a file from the remote location and puts it on the local system
@@ -189,20 +202,6 @@ func magicPut(config runningConfig, Bucket s3.Bucket) {
 	reportError("Issue completing the file %s in the Bucket", config.CmdParams[1], err)
 
 	return
-}
-
-// lists the content of a directory on the remote system
-// cli: `binary` `ls` `Pwd` `path` `bucketName` `username`
-// passed to this is ["path"]
-func ls(config runningConfig, Bucket s3.Bucket) {
-	items, err := Bucket.List(config.CmdParams[0], "", "", pagesize)
-	reportError("Failed listing contents of the Bucket behind the path %s", config.CmdParams[0], err)
-	for _, target := range items.Contents {
-		// prints out in the format defined by:
-		// "-rwxr-xr-1 root root 3171 Jan 18 12:23 temp.txt"
-		_, err = fmt.Printf("-rwxr-xr-1 %s %s %d Jan 18 12:23 %s", target.Owner, target.Owner, target.Size, target.Key)
-		reportError("Failed displaying the file %s", target.Key, err)
-	}
 }
 
 // removes everything under the given path on the remote Bucket
