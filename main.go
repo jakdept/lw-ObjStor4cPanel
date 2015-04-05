@@ -52,8 +52,9 @@ func getConfig() runningConfig {
 
 func SetupConnection(config runningConfig) *s3.S3 {
 	bucketRegion := aws.Region{
-		Name:       "liquidweb",
-		S3Endpoint: "https://objects.liquidweb.services",
+		Name:             "liquidweb",
+		S3Endpoint:       "https://objects.liquidweb.services",
+		S3BucketEndpoint: "https://objects.liquidweb.services",
 		//S3Endpoint: config.url,
 	}
 
@@ -136,7 +137,7 @@ func Chdir(config runningConfig, Bucket s3.Bucket) {
 // cli: `binary` `ls` `Pwd` `path` `bucketName` `username`
 // passed to this is ["path"]
 func Lsdir(config runningConfig, Bucket s3.Bucket) {
-	items, err := Bucket.List(config.CmdParams[0], "", "", pagesize)
+	items, err := Bucket.List(config.CmdParams[0], "/", "", pagesize)
 	if err != nil {
 		panic(fmt.Sprintf("failed to list the contents of path %s - %s", config.CmdParams[0], err.Error()))
 	}
