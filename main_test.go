@@ -45,14 +45,15 @@ func TestSetupConnection(t *testing.T) {
 func TestSetupBucket(t *testing.T) {
 	configData := []byte(`{"Pwd":"/", "AccessKey": "AccEssKey", "SecretKey": "SecRetKey", "Bucket": "BuKKiT"}`)
 	testingConfig := loadTestingConfig(configData)
-	connection := SetupConnection(testingConfig)
-	bucket := SetupBucket(testingConfig, *connection)
+	//connection := SetupConnection(testingConfig)
+	bucket := SetupBucket(testingConfig)
 
 	assert.Equal(t, "AccEssKey", bucket.S3.Auth.AccessKey, "the Access Key should be the same")
 	assert.Equal(t, "SecRetKey", bucket.S3.Auth.SecretKey, "the Secret Key should be the same")
+	//assert.Equal(t, "https://BuKKiT.objects.liquidweb.services", bucket.S3.Region.S3Endpoint, "the URL should be LW's")
 	assert.Equal(t, "https://objects.liquidweb.services", bucket.S3.Region.S3Endpoint, "the URL should be LW's")
 	assert.Equal(t, "liquidweb", bucket.S3.Region.Name, "the URL should be LW's")
-	assert.Equal(t, "BuKKiT", bucket.Name, "the name of the bucket is not being set correctly")
+	assert.Equal(t, "bukkit", bucket.Name, "the name of the bucket is not being set correctly")
 }
 
 func TestHiddenConfig(t *testing.T) {
@@ -61,8 +62,8 @@ func TestHiddenConfig(t *testing.T) {
 		t.Error("failed to load my config file testConfig.json")
 	}
 	testingConfig := loadTestingConfig(data)
-	connection := SetupConnection(testingConfig)
-	bucket := SetupBucket(testingConfig, *connection)
+	//connection := SetupConnection(testingConfig)
+	bucket := SetupBucket(testingConfig)
 
 	assert.Equal(t, testingConfig.AccessKey, bucket.S3.Auth.AccessKey, "the Access Key should be the same")
 	assert.Equal(t, testingConfig.SecretKey, bucket.S3.Auth.SecretKey, "the Secret Key should be the same")
@@ -96,19 +97,38 @@ func ExampleChdir() {
 		return
 	}
 	testingConfig := loadTestingConfig(data)
-	connection := SetupConnection(testingConfig)
-	Bucket := SetupBucket(testingConfig, *connection)
+	bucket := SetupBucket(testingConfig)
 
 	testingConfig.CmdParams = []string{"/"}
-	Chdir(testingConfig, Bucket)
+	Chdir(testingConfig, bucket)
 
-	testingConfig.CmdParams[0] = "/harrymetsally"
-	Chdir(testingConfig, Bucket)
+	testingConfig.CmdParams = []string{"/folderthatdoesnotexist"}
+	Chdir(testingConfig, bucket)
 
-	testingConfig.CmdParams[0] = "/harrymetsally/billysue"
-	Chdir(testingConfig, Bucket)
+	testingConfig.CmdParams = []string{"/testing"}
+	Chdir(testingConfig, bucket)
 	// Output:
 	// /
-	// /harrymetsally
-	// /harrymetsally/billysue
+	// /folderthatdoesnotexist
+	// /testing
+}
+
+func ExampleLsdir() {
+	data, err := ioutil.ReadFile("testConfig.json")
+	if err != nil {
+		return
+	}
+	testingConfig := loadTestingConfig(data)
+	bucket := SetupBucket(testingConfig)
+
+	//testingConfig.CmdParams = []string{"/"}
+	//Lsdir(testingConfig, bucket)
+
+	//testingConfig.CmdParams = []string{"/folderthatdoesnotexist"}
+	//Lsdir(testingConfig, bucket)
+
+	testingConfig.CmdParams = []string{"/stuff"}
+	Lsdir(testingConfig, bucket)
+	// Output
+	// this is not the correct output
 }
