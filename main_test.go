@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
+	"os"
 
 	"github.com/stretchr/testify/assert"
 	//"os"
@@ -13,23 +13,44 @@ import (
 
 //var testingConfig runningConfig
 
-func loadTestingConfig(data []byte) runningConfig {
-	testingConfig := new(runningConfig)
-	err := json.Unmarshal(data, &testingConfig)
+func loadTestingConfig(t *testing.T) runningConfig {
+	data, err := ioutil.ReadFile("testConfig.json")
 	if err != nil {
-		log.Printf("Failed to load a test configuration - %s", err)
+		t.Skip("failed to load my config file testConfig.json")
+	}
+	testingConfig := new(runningConfig)
+	err = json.Unmarshal(data, &testingConfig)
+	if err != nil {
+		t.Skip("Failed to parse test configuration -", err.Error())
 	}
 	return *testingConfig
 }
 
-func TestLoadTestingConfig(t *testing.T) {
-	configData := []byte(`{"Pwd":"/", "AccessKey": "AccEssKey", "SecretKey": "SecRetKey", "Bucket": "BuKKiT"}`)
-	testingConfig := loadTestingConfig(configData)
+func TestGetConfig(t *testing.T) {
+	os.Args = []string{"junk", "hackers", "/pwd/", "command", "args", "are", "here", "hack", "the", "gibson", "bucket", "access"}
+	err := os.Setenv("PASSWORD", "sekret")
+	assert.NoError(t, err)
 
-	assert.Equal(t, "AccEssKey", testingConfig.AccessKey, "the Access Key should be the same in the config")
-	assert.Equal(t, "SecRetKey", testingConfig.SecretKey, "the Secret Key should be the same in the config")
-	assert.Equal(t, "/", testingConfig.Pwd, "the pwd should be the same in the conf")
-	assert.Equal(t, "BuKKiT", testingConfig.Bucket, "the pwd should be the same in the conf")
+	config := getConfig()
+
+	expectedConfig := runningConfig{
+		Command:   "hackers",
+		Pwd:       "",
+		Bucket:    "bucket",
+		AccessKey: "access",
+		SecretKey: "sekret",
+		CmdParams: []string{
+			"command",
+			"args",
+			"are",
+			"here",
+			"hack",
+			"the",
+			"gibson",
+		},
+	}
+
+	assert.Equal(t, expectedConfig, config)
 }
 
 func TestSetupConnection(t *testing.T) {
@@ -39,7 +60,8 @@ func TestSetupConnection(t *testing.T) {
 		SecretKey: "SecRetKey",
 		Bucket:    "BuKKiT",
 	}
-	connection := SetupConnection(testingConfig)
+	connection, err := SetupConnection(testingConfig)
+	assert.NoError(t, err)
 
 	assert.Equal(t, "AccEssKey", connection.Auth.AccessKey, "the Access Key should be the same")
 	assert.Equal(t, "SecRetKey", connection.Auth.SecretKey, "the Secret Key should be the same")
@@ -54,7 +76,8 @@ func TestSetupBucket(t *testing.T) {
 		SecretKey: "SecRetKey",
 		Bucket:    "BuKKiT",
 	}
-	bucket := SetupBucket(testingConfig)
+	bucket, err := SetupBucket(testingConfig)
+	assert.NoError(t, err)
 
 	assert.Equal(t, "AccEssKey", bucket.S3.Auth.AccessKey, "the Access Key should be the same")
 	assert.Equal(t, "SecRetKey", bucket.S3.Auth.SecretKey, "the Secret Key should be the same")
@@ -65,13 +88,10 @@ func TestSetupBucket(t *testing.T) {
 }
 
 func TestHiddenConfig(t *testing.T) {
-	data, err := ioutil.ReadFile("testConfig.json")
-	if err != nil {
-		t.Skip("testing config not loaded\n", err.Error(), "\nskipping remote tests")
-	}
-	testingConfig := loadTestingConfig(data)
+	testingConfig := loadTestingConfig(t)
 	//connection := SetupConnection(testingConfig)
-	bucket := SetupBucket(testingConfig)
+	bucket, err := SetupBucket(testingConfig)
+	assert.NoError(t, err)
 
 	assert.Equal(t, testingConfig.AccessKey, bucket.S3.Auth.AccessKey, "the Access Key should be the same")
 	assert.Equal(t, testingConfig.SecretKey, bucket.S3.Auth.SecretKey, "the Secret Key should be the same")
@@ -81,31 +101,31 @@ func TestHiddenConfig(t *testing.T) {
 }
 
 func TestValidBucket(t *testing.T) {
-	data, err := ioutil.ReadFile("testConfig.json")
-	if err != nil {
-		t.Error("failed to load my config file testConfig.json")
-	}
-	testingConfig := loadTestingConfig(data)
-	connection := SetupConnection(testingConfig)
+	testingConfig := loadTestingConfig(t)
+	connection, err := SetupConnection(testingConfig)
+	assert.NoError(t, err)
 
 	_, err = connection.ListBuckets()
-	assert.Nil(t, err, "there should be no error listing the buckets")
+	assert.NoError(t, err)
 
-	bucketExists := ValidBucket(testingConfig, connection)
+	bucketExists, err := ValidBucket(testingConfig, connection)
 	assert.True(t, bucketExists, "the bucket should exist within the given space")
+	assert.NoError(t, err)
 
 	testingConfig.Bucket = "BadBucket"
-	bucketExists = ValidBucket(testingConfig, connection)
+	bucketExists, err = ValidBucket(testingConfig, connection)
 	assert.False(t, bucketExists, "the BadBucket should not exist within the given space")
+	assert.NoError(t, err)
 }
 
 func ExampleChdir() {
-	data, err := ioutil.ReadFile("testConfig.json")
-	if err != nil {
-		return
+	testingConfig := runningConfig{
+		Pwd:       "/",
+		AccessKey: "AccEssKey",
+		SecretKey: "SecRetKey",
+		Bucket:    "BuKKiT",
 	}
-	testingConfig := loadTestingConfig(data)
-	bucket := SetupBucket(testingConfig)
+	bucket, _ := SetupBucket(testingConfig)
 
 	testingConfig.CmdParams = []string{"/"}
 	Chdir(testingConfig, bucket)

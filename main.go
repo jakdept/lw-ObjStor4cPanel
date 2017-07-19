@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	//"log"
 	"net/http"
 	"os"
@@ -50,7 +51,7 @@ func getConfig() runningConfig {
 	return *config
 }
 
-func SetupConnection(config runningConfig) *s3.S3 {
+func SetupConnection(config runningConfig) (*s3.S3, error) {
 	bucketRegion := aws.Region{
 		Name:             "liquidweb",
 		S3Endpoint:       "https://objects.liquidweb.services",
@@ -60,16 +61,16 @@ func SetupConnection(config runningConfig) *s3.S3 {
 
 	bucketAuth, err := aws.GetAuth(config.AccessKey, config.SecretKey)
 	if err != nil {
-		panic(fmt.Sprintf("Problem creating Authentication %s - %s", config.AccessKey, err.Error()))
+		return nil, fmt.Errorf("Problem creating Authentication %s - %v", config.AccessKey, err)
 	}
 
-	return s3.New(bucketAuth, bucketRegion)
+	return s3.New(bucketAuth, bucketRegion), nil
 }
 
-func ValidBucket(config runningConfig, connection *s3.S3) bool {
+func ValidBucket(config runningConfig, connection *s3.S3) (bool, error) {
 	allBuckets, err := connection.ListBuckets()
 	if err != nil {
-		panic(fmt.Sprintf("problem listing buckets - %s", err.Error()))
+		return false, fmt.Errorf("problem listing buckets - %v", err)
 	}
 	bucketExists := false
 
@@ -78,33 +79,17 @@ func ValidBucket(config runningConfig, connection *s3.S3) bool {
 			bucketExists = true
 		}
 	}
-	return bucketExists
+	return bucketExists, nil
 }
 
-func SetupBucket(config runningConfig) s3.Bucket {
-	/*
-		S3Endpoint := "https://" + config.Bucket + ".objects.liquidweb.services"
-		bucketRegion := aws.Region{
-			Name:       "liquidweb",
-			S3Endpoint: S3Endpoint,
-			//S3Endpoint: config.url,
-		}
+func SetupBucket(config runningConfig) (s3.Bucket, error) {
+	connection, err := SetupConnection(config)
+	if err != nil {
+		return s3.Bucket{}, err
+	}
 
-		bucketAuth, err := aws.GetAuth(config.AccessKey, config.SecretKey)
-
-		if err != nil {
-			panic(fmt.Sprintf("error creating authentication %s - %s", config.AccessKey, err.Error()))
-		}
-
-		connection := s3.New(bucketAuth, bucketRegion)
-
-		// */
-
-	connection := SetupConnection(config)
-
-	Bucket := *connection.Bucket(config.Bucket)
-
-	return Bucket
+	b := *connection.Bucket(config.Bucket)
+	return b, nil
 }
 
 func callFunc(config runningConfig, Bucket s3.Bucket) {
@@ -285,7 +270,10 @@ func main() {
 	config := getConfig()
 
 	//connection := SetupConnection(config)
-	bucket := SetupBucket(config)
+	bucket, err := SetupBucket(config)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	callFunc(config, bucket)
 }
