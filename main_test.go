@@ -2,9 +2,10 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"log"
+
+	"github.com/stretchr/testify/assert"
 	//"os"
 	//"reflect"
 	"testing"
@@ -32,8 +33,12 @@ func TestLoadTestingConfig(t *testing.T) {
 }
 
 func TestSetupConnection(t *testing.T) {
-	configData := []byte(`{"Pwd":"/", "AccessKey": "AccEssKey", "SecretKey": "SecRetKey", "Bucket": "BuKKiT"}`)
-	testingConfig := loadTestingConfig(configData)
+	testingConfig := runningConfig{
+		Pwd:       "/",
+		AccessKey: "AccEssKey",
+		SecretKey: "SecRetKey",
+		Bucket:    "BuKKiT",
+	}
 	connection := SetupConnection(testingConfig)
 
 	assert.Equal(t, "AccEssKey", connection.Auth.AccessKey, "the Access Key should be the same")
@@ -43,9 +48,12 @@ func TestSetupConnection(t *testing.T) {
 }
 
 func TestSetupBucket(t *testing.T) {
-	configData := []byte(`{"Pwd":"/", "AccessKey": "AccEssKey", "SecretKey": "SecRetKey", "Bucket": "BuKKiT"}`)
-	testingConfig := loadTestingConfig(configData)
-	//connection := SetupConnection(testingConfig)
+	testingConfig := runningConfig{
+		Pwd:       "/",
+		AccessKey: "AccEssKey",
+		SecretKey: "SecRetKey",
+		Bucket:    "BuKKiT",
+	}
 	bucket := SetupBucket(testingConfig)
 
 	assert.Equal(t, "AccEssKey", bucket.S3.Auth.AccessKey, "the Access Key should be the same")
@@ -59,7 +67,7 @@ func TestSetupBucket(t *testing.T) {
 func TestHiddenConfig(t *testing.T) {
 	data, err := ioutil.ReadFile("testConfig.json")
 	if err != nil {
-		t.Error("failed to load my config file testConfig.json")
+		t.Skip("testing config not loaded\n", err.Error(), "\nskipping remote tests")
 	}
 	testingConfig := loadTestingConfig(data)
 	//connection := SetupConnection(testingConfig)
@@ -113,23 +121,23 @@ func ExampleChdir() {
 	// /testing
 }
 
-func TestLsdir(t *testing.T) {
-	log.Println("in ExampleLsdir")
-	data, err := ioutil.ReadFile("testConfig.json")
-	if err != nil {
-		return
-	}
-	testingConfig := loadTestingConfig(data)
-	bucket := SetupBucket(testingConfig)
+// func TestLsdir(t *testing.T) {
+// 	log.Println("in ExampleLsdir")
+// 	data, err := ioutil.ReadFile("testConfig.json")
+// 	if err != nil {
+// 		return
+// 	}
+// 	testingConfig := loadTestingConfig(data)
+// 	bucket := SetupBucket(testingConfig)
 
-	testingConfig.CmdParams = []string{"/"}
-	Lsdir(testingConfig, bucket)
+// 	testingConfig.CmdParams = []string{"/"}
+// 	Lsdir(testingConfig, bucket)
 
-	//testingConfig.CmdParams = []string{"/folderthatdoesnotexist"}
-	//Lsdir(testingConfig, bucket)
+// 	//testingConfig.CmdParams = []string{"/folderthatdoesnotexist"}
+// 	//Lsdir(testingConfig, bucket)
 
-	//testingConfig.CmdParams = []string{"/stuff"}
-	//Lsdir(testingConfig, bucket)
-	// Output
-	// this is not the correct output
-}
+// 	//testingConfig.CmdParams = []string{"/stuff"}
+// 	//Lsdir(testingConfig, bucket)
+// 	// Output
+// 	// this is not the correct output
+// }

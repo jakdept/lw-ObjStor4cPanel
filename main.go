@@ -52,7 +52,7 @@ func getConfig() runningConfig {
 
 func SetupConnection(config runningConfig) *s3.S3 {
 	bucketRegion := aws.Region{
-		Name:             "",
+		Name:             "liquidweb",
 		S3Endpoint:       "https://objects.liquidweb.services",
 		S3BucketEndpoint: "https://objects.liquidweb.services",
 		//S3Endpoint: config.url,
