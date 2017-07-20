@@ -50,6 +50,8 @@ func getConfig() runningConfig {
 	// SecretKey is passed via enviroment variable
 	config.SecretKey = os.Getenv("PASSWORD")
 
+	config.output = os.Stdout
+
 	return *config
 }
 
