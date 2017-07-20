@@ -93,24 +93,25 @@ func ValidBucket(bucketName string, connection *s3.S3) (bool, error) {
 	return bucketExists, nil
 }
 
-func callFunc(config runningConfig, Bucket s3.Bucket) {
+func (c *runningConfig) callFunc() error {
 	// call the function with the name of the Command that you got
 
-	switch config.Command {
+	switch c.Command {
 	case "get":
-		magicGet(config, Bucket)
+		magicGet(*c, c.bucket)
 	case "put":
-		magicPut(config, Bucket)
+		magicPut(*c, c.bucket)
 	case "ls":
-		Lsdir(config, Bucket)
+		Lsdir(*c, c.bucket)
 	case "mkdir":
 	case "chdir":
-		config.Chdir(config.CmdParams[0])
+		return c.Chdir(c.CmdParams[0])
 	case "rmdir":
-		rmdir(config, Bucket)
+		rmdir(*c, c.bucket)
 	case "delete":
-		delete(config, Bucket)
+		delete(*c, c.bucket)
 	}
+	return nil
 }
 
 // does almost nothing - not required, but must return the path
@@ -278,5 +279,5 @@ func main() {
 		log.Fatal(err)
 	}
 
-	callFunc(config, config.bucket)
+	config.callFunc()
 }
