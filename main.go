@@ -104,7 +104,7 @@ func (c *runningConfig) callFunc() error {
 	case "ls":
 		return c.Lsdir(c.CmdParams[0])
 	case "get":
-		magicGet(*c, c.bucket)
+		return c.magicGet(c.CmdParams[1], c.CmdParams[0])
 	case "put":
 		magicPut(*c, c.bucket)
 	case "mkdir":
@@ -162,26 +162,28 @@ func (c *runningConfig) get(local, remote string) error {
 	return nil
 }
 
-func magicGet(config runningConfig, Bucket s3.Bucket) {
+func (c *runningConfig) magicGet(local, remote string) error {
 	// open up the output file for writing
-	outFile, err := os.Create(config.CmdParams[1])
+	outFile, err := os.Create(local)
 	defer outFile.Close()
 	if err != nil {
-		panic(fmt.Sprintf("error writing to local file %s - %s", config.CmdParams[1], err.Error()))
+		return fmt.Errorf("error writing to local file %s - %v", local, err)
 	}
 
 	// open up the remote file for reading
-	dataResponse, err := Bucket.GetResponse(config.CmdParams[0])
+	dataResponse, err := c.bucket.GetResponse(remote)
 	defer dataResponse.Body.Close()
 	if err != nil {
-		panic(fmt.Sprintf("error loading remote file %s - %s", config.CmdParams[0], err.Error()))
+		return fmt.Errorf("error loading remote file %s - %v", remote, err)
 	}
 
 	// copy all bytes, without loading stuff in memory, then defer close happen
 	_, err = io.Copy(outFile, dataResponse.Body)
 	if err != nil {
-		panic(fmt.Sprintf("error writing to local file %s - %s", config.CmdParams[1], err.Error()))
+		return fmt.Errorf("error writing to local file %s - %v", local, err)
 	}
+
+	return nil
 }
 
 // puts a file from the local location to a remote location
