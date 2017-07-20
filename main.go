@@ -109,7 +109,7 @@ func (c *runningConfig) callFunc() error {
 		magicPut(*c, c.bucket)
 	case "mkdir":
 	case "rmdir":
-		rmdir(*c, c.bucket)
+		return c.rmdir(c.CmdParams[0])
 	case "delete":
 		return c.delete(c.CmdParams[0])
 	}
@@ -244,24 +244,25 @@ func magicPut(config runningConfig, Bucket s3.Bucket) {
 // removes everything under the given path on the remote Bucket
 // cli: `binary` `rmdir` `Pwd` `path` `bucketName` `username`
 // passed to this is ["path"]
-func rmdir(config runningConfig, Bucket s3.Bucket) {
-	items, err := Bucket.List(config.CmdParams[0], "", "", pagesize)
+func (c *runningConfig) rmdir(target string) error {
+	items, err := c.bucket.List(target, "", "", pagesize)
 	if err != nil {
-		panic(fmt.Sprintf("error listing path %s - %s", config.CmdParams[0], err.Error()))
+		return fmt.Errorf("error listing path %s - %v", target, err)
 	}
 	for len(items.Contents) > 0 {
 		for _, target := range items.Contents {
-			err = Bucket.Del(target.Key)
+			err = c.bucket.Del(target.Key)
 			if err != nil {
-				panic(fmt.Sprintf("error removing remote %s - %s", target.Key, err.Error()))
+				return fmt.Errorf("error removing remote %s - %v", target.Key, err)
 			}
 		}
 		// check to make sure everything is gone
-		items, err = Bucket.List(config.CmdParams[0], "", "", pagesize)
+		items, err = c.bucket.List(target, "", "", pagesize)
 		if err != nil {
-			panic(fmt.Sprintf("error listing path %s - %s", config.CmdParams[0], err.Error()))
+			return fmt.Errorf("error listing path %s - %v", target, err)
 		}
 	}
+	return nil
 }
 
 // removes a file at a given location
