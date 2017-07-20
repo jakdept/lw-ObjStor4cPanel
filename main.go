@@ -149,16 +149,17 @@ func (c *runningConfig) Lsdir(dir string) error {
 // Gets a file from the remote location and puts it on the local system
 // cli: `binary` `get` `Pwd `Remote file` `local file` `bucketName` `username`
 // passed to this is ["remote file", "local file"]
-func get(config runningConfig, Bucket s3.Bucket) {
+func (c *runningConfig) get(local, remote string) error {
 	//data := new(Buffer)
-	data, err := Bucket.Get(config.CmdParams[0])
+	data, err := c.bucket.Get(remote)
 	if err != nil {
-		panic(fmt.Sprintf("error loading remote file %s - %s", config.CmdParams[0], err.Error()))
+		return fmt.Errorf("error loading remote file %s - %v", remote, err)
 	}
-	err = ioutil.WriteFile(config.CmdParams[1], data, 0644)
+	err = ioutil.WriteFile(local, data, 0644)
 	if err != nil {
-		panic(fmt.Sprintf("error writing local file %s - %s", config.CmdParams[1], err.Error()))
+		return fmt.Errorf("error writing local file %s - %v", local, err)
 	}
+	return nil
 }
 
 func magicGet(config runningConfig, Bucket s3.Bucket) {
