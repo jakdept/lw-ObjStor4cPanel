@@ -104,9 +104,9 @@ func (c *runningConfig) callFunc() error {
 	case "ls":
 		return c.Lsdir(c.CmdParams[0])
 	case "get":
-		return magicGet(cmd.Params[1], cmd.Params[0])
+		return c.magicGet(c.CmdParams[1], c.CmdParams[0])
 	case "put":
-		magicPut(*c, c.bucket)
+		return c.magicPut(c.CmdParams[1], c.CmdParams[0])
 	case "mkdir":
 	case "rmdir":
 		return c.rmdir(c.CmdParams[0])
@@ -206,12 +206,12 @@ func (c *runningConfig) put(remote, local string) error {
 
 // puts a larger file from the local location to a remote location by pieces
 // cli: `binary` `put` `Pwd `local file` `remote file` `bucketName` `username`
-func magicPut(config runningConfig, Bucket s3.Bucket) {
+func (c *runningConfig) magicPut(remote, local string) error {
 	// open the file to be transferred
-	file, err := os.Open(config.CmdParams[0])
+	file, err := os.Open(local)
 	defer file.Close()
 	if err != nil {
-		panic(fmt.Sprintf("error loading local file %s - %s", config.CmdParams[0], err.Error()))
+		return fmt.Errorf("error loading local file %s - %v", local, err)
 	}
 
 	bytes := make([]byte, chunkSize)
@@ -219,31 +219,35 @@ func magicPut(config runningConfig, Bucket s3.Bucket) {
 	// at most, buffer.Read can only read len(bytes) bytes
 	_, err = buffer.Read(bytes)
 	if err != nil {
-		panic(fmt.Sprintf("error reading from local file %s - %s", config.CmdParams[0], err.Error()))
+		return fmt.Errorf("error reading from local file %s - %v", local, err)
 	}
 
 	// determine the filetype based on the bytes you read
 	filetype := http.DetectContentType(bytes)
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		return fmt.Errorf("error resetting local file %s - %v", local, err)
+	}
 
 	// set up for multipart upload
-	multiUploader, err := Bucket.InitMulti(config.CmdParams[1], filetype, s3.ACL("private"))
+	multiUploader, err := c.bucket.InitMulti(remote, filetype, s3.ACL("private"))
 	if err != nil {
-		panic(fmt.Sprintf("error opening remote file %s - %s", config.CmdParams[1], err.Error()))
+		return fmt.Errorf("error opening remote file %s - %v", remote, err)
 	}
 
 	// upload all of the file in pieces
 	parts, err := multiUploader.PutAll(file, chunkSize)
 	if err != nil {
-		panic(fmt.Sprintf("error writing to remote file %s - %s", config.CmdParams[1], err.Error()))
+		return fmt.Errorf("error writing to remote file %s - %v", local, err)
 	}
 
 	// complete the file
 	err = multiUploader.Complete(parts)
 	if err != nil {
-		panic(fmt.Sprintf("error completing file %s - %s", config.CmdParams[1], err.Error()))
+		return fmt.Errorf("error completing file %s - %v", remote, err)
 	}
 
-	return
+	return nil
 }
 
 // removes everything under the given path on the remote Bucket
