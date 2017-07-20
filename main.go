@@ -104,7 +104,7 @@ func (c *runningConfig) callFunc() error {
 	case "ls":
 		return c.Lsdir(c.CmdParams[0])
 	case "get":
-		return c.magicGet(c.CmdParams[1], c.CmdParams[0])
+		return magicGet(cmd.Params[1], cmd.Params[0])
 	case "put":
 		magicPut(*c, c.bucket)
 	case "mkdir":
@@ -162,6 +162,9 @@ func (c *runningConfig) get(local, remote string) error {
 	return nil
 }
 
+// Gets a larger file from the remote location and puts it on the local system
+// cli: `binary` `get` `Pwd `Remote file` `local file` `bucketName` `username`
+// passed to this is ["remote file", "local file"]
 func (c *runningConfig) magicGet(local, remote string) error {
 	// open up the output file for writing
 	outFile, err := os.Create(local)
@@ -201,7 +204,7 @@ func (c *runningConfig) put(remote, local string) error {
 	return nil
 }
 
-// puts a file from the local location to a remote location by pieces
+// puts a larger file from the local location to a remote location by pieces
 // cli: `binary` `put` `Pwd `local file` `remote file` `bucketName` `username`
 func magicPut(config runningConfig, Bucket s3.Bucket) {
 	// open the file to be transferred
