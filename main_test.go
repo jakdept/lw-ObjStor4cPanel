@@ -17,6 +17,12 @@ func loadTestingConfig(t *testing.T) *runningConfig {
 	testingConfig.AccessKey = os.Getenv("ACCESSKEY")
 	testingConfig.SecretKey = os.Getenv("SECRETKEY")
 	testingConfig.bucketName = os.Getenv("BUCKET")
+	if testingConfig.Pwd == "" ||
+		testingConfig.AccessKey == "" ||
+		testingConfig.SecretKey == "" ||
+		testingConfig.bucketName == "" {
+		t.Skip("missing test configuration")
+	}
 	return testingConfig
 }
 
