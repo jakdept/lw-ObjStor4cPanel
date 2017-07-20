@@ -2,7 +2,11 @@ package main
 
 import (
 	"bytes"
+	"fmt"
+	"io/ioutil"
 	"os"
+	"path"
+	"path/filepath"
 
 	"github.com/stretchr/testify/assert"
 	//"os"
@@ -159,6 +163,78 @@ func TestLsdir(t *testing.T) {
 
 	err = testingConfig.Lsdir("/")
 	assert.NoError(t, err)
+
+	goldie.Assert(t, t.Name(), outputBuf.Bytes())
+}
+
+func TestRemoteFolder(t *testing.T) {
+	files := []string{
+		"thank_you_for_not_loitering.jpg",
+		"database.tar.gz",
+	}
+
+	for i := 0; i < len(files); i++ {
+		files[i] = path.Clean(files[i])
+	}
+
+	testingConfig, outputBuf := loadTestingConfig(t)
+	err := testingConfig.SetupBucket()
+	assert.NoError(t, err)
+
+	testingConfig.output = os.Stderr
+
+	err = testingConfig.Rmdir("/testdata")
+	assert.NoError(t, err)
+
+	err = testingConfig.Mkdir("/testdata")
+	assert.NoError(t, err)
+
+	for _, file := range files {
+		local := filepath.Join("testdata", file)
+		remote := filepath.Join(string(os.PathSeparator), "testdata", file)
+		fmt.Fprintf(testingConfig.output, "putting local [%s] into remote [%s]\n", local, remote)
+
+		err = testingConfig.magicPut(remote, local)
+		assert.NoError(t, err)
+		err = testingConfig.Lsdir("/testdata")
+		assert.NoError(t, err)
+	}
+
+	tmpdir, err := ioutil.TempDir("", "cPanel_backup_transporter")
+	assert.NoError(t, err)
+
+	fmt.Fprintf(testingConfig.output, "working with temp directory [%s]\n", tmpdir)
+
+	for _, file := range files {
+		local := filepath.Join(tmpdir, file)
+		remote := filepath.Join(string(os.PathSeparator), "testdata", file)
+		fmt.Fprintf(testingConfig.output, "pulling remote [%s] into local [%s]\n", remote, local)
+
+		err = testingConfig.magicGet(local, remote)
+		assert.NoError(t, err)
+	}
+
+	for _, file := range files {
+		fi, err := os.Stat(filepath.Join(tmpdir, file))
+		assert.NoError(t, err)
+
+		fmt.Fprintf(testingConfig.output, "[%d] %s\n", fi.Size(), fi.Name())
+	}
+
+	fmt.Fprintln(testingConfig.output, "contents before removal")
+
+	err = testingConfig.Lsdir("/testdata")
+	assert.NoError(t, err)
+
+	err = testingConfig.Rmdir("/testdata")
+	assert.NoError(t, err)
+
+	fmt.Fprintln(testingConfig.output, "contents after removal")
+
+	err = testingConfig.Lsdir("/testdata")
+	assert.NoError(t, err)
+
+	t.Skip()
 
 	goldie.Assert(t, t.Name(), outputBuf.Bytes())
 }
