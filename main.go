@@ -186,16 +186,17 @@ func magicGet(config runningConfig, Bucket s3.Bucket) {
 
 // puts a file from the local location to a remote location
 // cli: `binary` `put` `Pwd `local file` `remote file` `bucketName` `username`
-func put(config runningConfig, Bucket s3.Bucket) {
+func (c *runningConfig) put(remote, local string) error {
 	//data := new(Buffer)
-	data, err := ioutil.ReadFile(config.CmdParams[0])
+	data, err := ioutil.ReadFile(local)
 	if err != nil {
-		panic(fmt.Sprintf("error loading local file %s - %s", config.CmdParams[0], err.Error()))
+		return fmt.Errorf("error loading local file %s - %v", local, err)
 	}
-	err = Bucket.Put(config.CmdParams[1], data, contentType, "0644")
+	err = c.bucket.Put(remote, data, contentType, "0644")
 	if err != nil {
-		panic(fmt.Sprintf("error writing remote file %s - %s", config.CmdParams[1], err.Error()))
+		return fmt.Errorf("error writing remote file %s - %v", remote, err)
 	}
+	return nil
 }
 
 // puts a file from the local location to a remote location by pieces
