@@ -42,7 +42,6 @@ func TestGetConfig(t *testing.T) {
 	assert.NoError(t, err)
 
 	config := getConfig()
-	config.output = nil
 
 	expectedConfig := runningConfig{
 		Command:    "hackers",
@@ -50,6 +49,7 @@ func TestGetConfig(t *testing.T) {
 		bucketName: "bucket",
 		AccessKey:  "access",
 		SecretKey:  "sekret",
+		output:     os.Stdout,
 		CmdParams: []string{
 			"command",
 			"args",
