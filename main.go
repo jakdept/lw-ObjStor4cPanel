@@ -117,7 +117,7 @@ func (c *runningConfig) callFunc() error {
 // does almost nothing - not required, but must return the path
 // cli: `binary` `chdir` `Pwd` `path` `bucketName` `username`
 func (c *runningConfig) Chdir(dir string) error {
-	_, err := fmt.Println(dir)
+	_, err := fmt.Fprintln(c.output, dir)
 	if err != nil {
 		return fmt.Errorf("failed to print the given path %s - %v", dir, err)
 	}

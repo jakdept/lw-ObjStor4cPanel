@@ -1,17 +1,22 @@
 package main
 
 import (
+	"bytes"
 	"os"
 
 	"github.com/stretchr/testify/assert"
 	//"os"
 	//"reflect"
 	"testing"
+
+	"github.com/sebdah/goldie"
 )
 
-//var testingConfig runningConfig
+func init() {
+	goldie.FixtureDir = "testdata/fixtures"
+}
 
-func loadTestingConfig(t *testing.T) *runningConfig {
+func loadTestingConfig(t *testing.T) (*runningConfig, bytes.Buffer) {
 	testingConfig := new(runningConfig)
 	testingConfig.Pwd = os.Getenv("PWD")
 	testingConfig.AccessKey = os.Getenv("ACCESSKEY")
@@ -23,7 +28,12 @@ func loadTestingConfig(t *testing.T) *runningConfig {
 		testingConfig.bucketName == "" {
 		t.Skip("missing test configuration")
 	}
-	return testingConfig
+
+	// set up something to capture output
+	outputBuf := bytes.Buffer{}
+	testingConfig.output = &outputBuf
+
+	return testingConfig, outputBuf
 }
 
 func TestGetConfig(t *testing.T) {
@@ -88,7 +98,7 @@ func TestSetupBucket(t *testing.T) {
 }
 
 func TestHiddenConfig(t *testing.T) {
-	testingConfig := loadTestingConfig(t)
+	testingConfig, _ := loadTestingConfig(t)
 	//connection := SetupConnection(testingConfig)
 	err := testingConfig.SetupBucket()
 	assert.NoError(t, err)
@@ -101,7 +111,7 @@ func TestHiddenConfig(t *testing.T) {
 }
 
 func TestValidBucket(t *testing.T) {
-	testingConfig := loadTestingConfig(t)
+	testingConfig, _ := loadTestingConfig(t)
 	connection, err := testingConfig.SetupConnection()
 	assert.NoError(t, err)
 
@@ -117,12 +127,14 @@ func TestValidBucket(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func ExampleChdir() {
+func TestChdir(t *testing.T) {
+	outputBuf := bytes.Buffer{}
 	testingConfig := runningConfig{
 		Pwd:        "/",
 		AccessKey:  "AccEssKey",
 		SecretKey:  "SecRetKey",
 		bucketName: "BuKKiT",
+		output:     &outputBuf,
 	}
 
 	testingConfig.SetupBucket()
@@ -135,14 +147,12 @@ func ExampleChdir() {
 
 	testingConfig.CmdParams = []string{"/testing"}
 	testingConfig.Chdir(testingConfig.CmdParams[0])
-	// Output:
-	// /
-	// /folderthatdoesnotexist
-	// /testing
+
+	goldie.Assert(t, t.Name(), outputBuf.Bytes())
 }
 
 func TestLsdir(t *testing.T) {
-	testingConfig := loadTestingConfig(t)
+	testingConfig, _ := loadTestingConfig(t)
 	err := testingConfig.SetupBucket()
 	assert.NoError(t, err)
 
