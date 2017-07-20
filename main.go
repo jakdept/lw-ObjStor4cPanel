@@ -53,10 +53,9 @@ func getConfig() runningConfig {
 
 func SetupConnection(config runningConfig) (*s3.S3, error) {
 	bucketRegion := aws.Region{
-		Name:             "liquidweb",
-		S3Endpoint:       "https://objects.liquidweb.services",
-		S3BucketEndpoint: "https://objects.liquidweb.services",
-		//S3Endpoint: config.url,
+		Name:              "liquidweb",
+		S3Endpoint:        "https://objects.liquidweb.services",
+		S3LowercaseBucket: true,
 	}
 
 	bucketAuth, err := aws.GetAuth(config.AccessKey, config.SecretKey)
@@ -114,20 +113,21 @@ func callFunc(config runningConfig, Bucket s3.Bucket) {
 
 // does almost nothing - not required, but must return the path
 // cli: `binary` `chdir` `Pwd` `path` `bucketName` `username`
-func Chdir(config runningConfig, Bucket s3.Bucket) {
+func Chdir(config runningConfig, Bucket s3.Bucket) error {
 	_, err := fmt.Println(config.CmdParams[0])
 	if err != nil {
-		panic(fmt.Sprintf("failed to print the given path %s - %s", config.CmdParams[9], err.Error()))
+		return fmt.Errorf("failed to print the given path %s - %v", config.CmdParams[9], err)
 	}
+	return nil
 }
 
 // lists the content of a directory on the remote system
 // cli: `binary` `ls` `Pwd` `path` `bucketName` `username`
 // passed to this is ["path"]
-func Lsdir(config runningConfig, Bucket s3.Bucket) {
+func Lsdir(config runningConfig, Bucket s3.Bucket) error {
 	items, err := Bucket.List(config.CmdParams[0], "/", "", pagesize)
 	if err != nil {
-		panic(fmt.Sprintf("failed to list the contents of path %s - %s", config.CmdParams[0], err.Error()))
+		return fmt.Errorf("failed to list the contents of path %s - %v", config.CmdParams[0], err)
 	}
 	for _, target := range items.Contents {
 		// prints out in the format defined by:
@@ -137,6 +137,7 @@ func Lsdir(config runningConfig, Bucket s3.Bucket) {
 			panic(fmt.Sprintf("failed display the file %s - %s", target.Key, err.Error()))
 		}
 	}
+	return nil
 }
 
 // Gets a file from the remote location and puts it on the local system

@@ -141,23 +141,20 @@ func ExampleChdir() {
 	// /testing
 }
 
-// func TestLsdir(t *testing.T) {
-// 	log.Println("in ExampleLsdir")
-// 	data, err := ioutil.ReadFile("testConfig.json")
-// 	if err != nil {
-// 		return
-// 	}
-// 	testingConfig := loadTestingConfig(data)
-// 	bucket := SetupBucket(testingConfig)
+func TestLsdir(t *testing.T) {
+	testingConfig := loadTestingConfig(t)
+	bucket, err := SetupBucket(testingConfig)
+	assert.NoError(t, err)
 
-// 	testingConfig.CmdParams = []string{"/"}
-// 	Lsdir(testingConfig, bucket)
+	testingConfig.CmdParams = []string{"/"}
+	err = Lsdir(testingConfig, bucket)
+	assert.NoError(t, err)
 
-// 	//testingConfig.CmdParams = []string{"/folderthatdoesnotexist"}
-// 	//Lsdir(testingConfig, bucket)
+	//testingConfig.CmdParams = []string{"/folderthatdoesnotexist"}
+	//Lsdir(testingConfig, bucket)
 
-// 	//testingConfig.CmdParams = []string{"/stuff"}
-// 	//Lsdir(testingConfig, bucket)
-// 	// Output
-// 	// this is not the correct output
-// }
+	//testingConfig.CmdParams = []string{"/stuff"}
+	//Lsdir(testingConfig, bucket)
+	// Output
+	// this is not the correct output
+}
