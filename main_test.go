@@ -42,6 +42,7 @@ func TestGetConfig(t *testing.T) {
 	assert.NoError(t, err)
 
 	config := getConfig()
+	config.output = nil
 
 	expectedConfig := runningConfig{
 		Command:    "hackers",
