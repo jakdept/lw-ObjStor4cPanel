@@ -1,5 +1,6 @@
-cPanelToObjectStore
-===================
+# cPanelToObjectStore
+
+[![Build Status](https://travis-ci.org/jakdept/cPanelToObjectStore.svg?branch=master)](https://travis-ci.org/jakdept/cPanelToObjectStore)
 
 **_This is experimental for the time being_**
 
