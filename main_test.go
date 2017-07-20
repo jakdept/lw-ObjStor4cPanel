@@ -153,18 +153,12 @@ func TestChdir(t *testing.T) {
 }
 
 func TestLsdir(t *testing.T) {
-	testingConfig, _ := loadTestingConfig(t)
+	testingConfig, outputBuf := loadTestingConfig(t)
 	err := testingConfig.SetupBucket()
 	assert.NoError(t, err)
 
 	err = testingConfig.Lsdir("/")
 	assert.NoError(t, err)
 
-	//testingConfig.CmdParams = []string{"/folderthatdoesnotexist"}
-	//Lsdir(testingConfig, bucket)
-
-	//testingConfig.CmdParams = []string{"/stuff"}
-	//Lsdir(testingConfig, bucket)
-	// Output
-	// this is not the correct output
+	goldie.Assert(t, t.Name(), outputBuf.Bytes())
 }
