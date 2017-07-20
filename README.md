@@ -25,3 +25,15 @@ Eventually, a compiled binary will be available to copy to the host system, and 
 1. `Remote Account Username` is going to be a valid access key that you have setup
 1. `Remote Password` is going to be the secret key that is associated with the access key that you're using
 
+## Testing ##
+
+You can run some (limited) tests without a valid configuration for Liquidweb's Object Storage, however in order to run all tests you need a valid configuration. This configuraiton should be in a file called "testConfig.json" and should look something like example.testConfig.json.
+
+```json
+{
+  "pwd": "/",
+  "accessKey": "accessKey",
+  "secretKey": "secretKey",
+  "bucketName": "bucketName",
+}
+```
