@@ -26,12 +26,14 @@ const pagesize = 1000
 const chunkSize = 33554432 // 32M in bytes
 
 type runningConfig struct {
-	Command   string
-	Pwd       string
-	Bucket    string
-	CmdParams []string
-	AccessKey string
-	SecretKey string
+	Command    string
+	Pwd        string
+	bucketName string
+	CmdParams  []string
+	AccessKey  string
+	SecretKey  string
+	bucket     s3.Bucket
+	output     io.Writer
 }
 
 func getConfig() runningConfig {
@@ -40,7 +42,7 @@ func getConfig() runningConfig {
 	// binary Command Pwd [CmdParams ...] Bucket AccessKey
 	config.Command = os.Args[1]
 	//Pwd := os.Args[2]
-	config.Bucket = os.Args[len(os.Args)-2]
+	config.bucketName = os.Args[len(os.Args)-2]
 	config.AccessKey = os.Args[len(os.Args)-1]
 
 	config.CmdParams = os.Args[3 : len(os.Args)-2]
@@ -51,44 +53,44 @@ func getConfig() runningConfig {
 	return *config
 }
 
-func SetupConnection(config runningConfig) (*s3.S3, error) {
+func (c *runningConfig) SetupBucket() error {
+	connection, err := c.SetupConnection()
+	if err != nil {
+		return err
+	}
+
+	c.bucket = *connection.Bucket(c.bucketName)
+	return nil
+}
+
+func (c *runningConfig) SetupConnection() (*s3.S3, error) {
 	bucketRegion := aws.Region{
 		Name:              "liquidweb",
 		S3Endpoint:        "https://objects.liquidweb.services",
 		S3LowercaseBucket: true,
 	}
 
-	bucketAuth, err := aws.GetAuth(config.AccessKey, config.SecretKey)
+	bucketAuth, err := aws.GetAuth(c.AccessKey, c.SecretKey)
 	if err != nil {
-		return nil, fmt.Errorf("Problem creating Authentication %s - %v", config.AccessKey, err)
+		return nil, fmt.Errorf("Problem creating Authentication %s - %v", c.AccessKey, err)
 	}
 
 	return s3.New(bucketAuth, bucketRegion), nil
 }
 
-func ValidBucket(config runningConfig, connection *s3.S3) (bool, error) {
+func ValidBucket(bucketName string, connection *s3.S3) (bool, error) {
 	allBuckets, err := connection.ListBuckets()
 	if err != nil {
 		return false, fmt.Errorf("problem listing buckets - %v", err)
 	}
-	bucketExists := false
 
-	for _, Bucket := range allBuckets.Buckets {
-		if Bucket.Name == config.Bucket {
+	var bucketExists bool
+	for _, bucket := range allBuckets.Buckets {
+		if bucket.Name == bucketName {
 			bucketExists = true
 		}
 	}
 	return bucketExists, nil
-}
-
-func SetupBucket(config runningConfig) (s3.Bucket, error) {
-	connection, err := SetupConnection(config)
-	if err != nil {
-		return s3.Bucket{}, err
-	}
-
-	b := *connection.Bucket(config.Bucket)
-	return b, nil
 }
 
 func callFunc(config runningConfig, Bucket s3.Bucket) {
@@ -103,7 +105,7 @@ func callFunc(config runningConfig, Bucket s3.Bucket) {
 		Lsdir(config, Bucket)
 	case "mkdir":
 	case "chdir":
-		Chdir(config, Bucket)
+		config.Chdir(config.CmdParams[0])
 	case "rmdir":
 		rmdir(config, Bucket)
 	case "delete":
@@ -113,10 +115,10 @@ func callFunc(config runningConfig, Bucket s3.Bucket) {
 
 // does almost nothing - not required, but must return the path
 // cli: `binary` `chdir` `Pwd` `path` `bucketName` `username`
-func Chdir(config runningConfig, Bucket s3.Bucket) error {
-	_, err := fmt.Println(config.CmdParams[0])
+func (c runningConfig) Chdir(dir string) error {
+	_, err := fmt.Println(dir)
 	if err != nil {
-		return fmt.Errorf("failed to print the given path %s - %v", config.CmdParams[9], err)
+		return fmt.Errorf("failed to print the given path %s - %v", dir, err)
 	}
 	return nil
 }
@@ -134,7 +136,7 @@ func Lsdir(config runningConfig, Bucket s3.Bucket) error {
 		// "-rwxr-xr-1 root root 3171 Jan 18 12:23 temp.txt"
 		_, err = fmt.Printf("-rwxr-xr-1 %s %s %d Jan 18 12:23 %s", target.Owner, target.Owner, target.Size, target.Key)
 		if err != nil {
-			panic(fmt.Sprintf("failed display the file %s - %s", target.Key, err.Error()))
+			return fmt.Errorf("failed display the file %s - %v", target.Key, err)
 		}
 	}
 	return nil
@@ -271,10 +273,10 @@ func main() {
 	config := getConfig()
 
 	//connection := SetupConnection(config)
-	bucket, err := SetupBucket(config)
+	err := config.SetupBucket()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	callFunc(config, bucket)
+	callFunc(config, config.bucket)
 }

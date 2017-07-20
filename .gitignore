@@ -21,6 +21,7 @@ _testmain.go
 
 config.json
 testConfig.json
+testConfig.sh
 
 *.exe
 *.test
