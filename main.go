@@ -111,7 +111,7 @@ func (c *runningConfig) callFunc() error {
 	case "rmdir":
 		rmdir(*c, c.bucket)
 	case "delete":
-		delete(*c, c.bucket)
+		return c.delete(c.CmdParams[0])
 	}
 	return nil
 }
@@ -267,11 +267,12 @@ func rmdir(config runningConfig, Bucket s3.Bucket) {
 // removes a file at a given location
 // cli: `delete` `rmdir` `Pwd` `path` `bucketName` `username`
 // passed to this is ["path"]
-func delete(config runningConfig, Bucket s3.Bucket) {
-	err := Bucket.Del(config.CmdParams[0])
+func (c *runningConfig) delete(remote string) error {
+	err := c.bucket.Del(remote)
 	if err != nil {
-		panic(fmt.Sprintf("failed to delete %s", config.CmdParams[0], err.Error()))
+		return fmt.Errorf("failed to delete %s - %v", remote, err)
 	}
+	return nil
 }
 
 func main() {
