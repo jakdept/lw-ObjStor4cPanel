@@ -146,8 +146,7 @@ func TestLsdir(t *testing.T) {
 	err := testingConfig.SetupBucket()
 	assert.NoError(t, err)
 
-	testingConfig.CmdParams = []string{"/"}
-	err = Lsdir(*testingConfig, testingConfig.bucket)
+	err = testingConfig.Lsdir("/")
 	assert.NoError(t, err)
 
 	//testingConfig.CmdParams = []string{"/folderthatdoesnotexist"}

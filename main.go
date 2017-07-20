@@ -97,15 +97,15 @@ func (c *runningConfig) callFunc() error {
 	// call the function with the name of the Command that you got
 
 	switch c.Command {
+	case "chdir":
+		return c.Chdir(c.CmdParams[0])
+	case "ls":
+		return c.Lsdir(c.CmdParams[0])
 	case "get":
 		magicGet(*c, c.bucket)
 	case "put":
 		magicPut(*c, c.bucket)
-	case "ls":
-		Lsdir(*c, c.bucket)
 	case "mkdir":
-	case "chdir":
-		return c.Chdir(c.CmdParams[0])
 	case "rmdir":
 		rmdir(*c, c.bucket)
 	case "delete":
@@ -116,7 +116,7 @@ func (c *runningConfig) callFunc() error {
 
 // does almost nothing - not required, but must return the path
 // cli: `binary` `chdir` `Pwd` `path` `bucketName` `username`
-func (c runningConfig) Chdir(dir string) error {
+func (c *runningConfig) Chdir(dir string) error {
 	_, err := fmt.Println(dir)
 	if err != nil {
 		return fmt.Errorf("failed to print the given path %s - %v", dir, err)
@@ -127,10 +127,10 @@ func (c runningConfig) Chdir(dir string) error {
 // lists the content of a directory on the remote system
 // cli: `binary` `ls` `Pwd` `path` `bucketName` `username`
 // passed to this is ["path"]
-func Lsdir(config runningConfig, Bucket s3.Bucket) error {
-	items, err := Bucket.List(config.CmdParams[0], "/", "", pagesize)
+func (c *runningConfig) Lsdir(dir string) error {
+	items, err := c.bucket.List(dir, "/", "", pagesize)
 	if err != nil {
-		return fmt.Errorf("failed to list the contents of path %s - %v", config.CmdParams[0], err)
+		return fmt.Errorf("failed to list the contents of path %s - %v", dir, err)
 	}
 	for _, target := range items.Contents {
 		// prints out in the format defined by:
