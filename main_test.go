@@ -1,29 +1,39 @@
 package main
 
 import (
-	"encoding/json"
-	"io/ioutil"
+	"bytes"
 	"os"
 
 	"github.com/stretchr/testify/assert"
 	//"os"
 	//"reflect"
 	"testing"
+
+	"github.com/sebdah/goldie"
 )
 
-//var testingConfig runningConfig
+func init() {
+	goldie.FixtureDir = "testdata/fixtures"
+}
 
-func loadTestingConfig(t *testing.T) runningConfig {
-	data, err := ioutil.ReadFile("testConfig.json")
-	if err != nil {
-		t.Skip("failed to load my config file testConfig.json")
-	}
+func loadTestingConfig(t *testing.T) (*runningConfig, bytes.Buffer) {
 	testingConfig := new(runningConfig)
-	err = json.Unmarshal(data, &testingConfig)
-	if err != nil {
-		t.Skip("Failed to parse test configuration -", err.Error())
+	testingConfig.Pwd = os.Getenv("PWD")
+	testingConfig.AccessKey = os.Getenv("ACCESSKEY")
+	testingConfig.SecretKey = os.Getenv("SECRETKEY")
+	testingConfig.bucketName = os.Getenv("BUCKET")
+	if testingConfig.Pwd == "" ||
+		testingConfig.AccessKey == "" ||
+		testingConfig.SecretKey == "" ||
+		testingConfig.bucketName == "" {
+		t.Skip("missing test configuration")
 	}
-	return *testingConfig
+
+	// set up something to capture output
+	outputBuf := bytes.Buffer{}
+	testingConfig.output = &outputBuf
+
+	return testingConfig, outputBuf
 }
 
 func TestGetConfig(t *testing.T) {
@@ -34,11 +44,12 @@ func TestGetConfig(t *testing.T) {
 	config := getConfig()
 
 	expectedConfig := runningConfig{
-		Command:   "hackers",
-		Pwd:       "",
-		Bucket:    "bucket",
-		AccessKey: "access",
-		SecretKey: "sekret",
+		Command:    "hackers",
+		Pwd:        "",
+		bucketName: "bucket",
+		AccessKey:  "access",
+		SecretKey:  "sekret",
+		output:     os.Stdout,
 		CmdParams: []string{
 			"command",
 			"args",
@@ -54,13 +65,13 @@ func TestGetConfig(t *testing.T) {
 }
 
 func TestSetupConnection(t *testing.T) {
-	testingConfig := runningConfig{
-		Pwd:       "/",
-		AccessKey: "AccEssKey",
-		SecretKey: "SecRetKey",
-		Bucket:    "BuKKiT",
+	testingConfig := &runningConfig{
+		Pwd:        "/",
+		AccessKey:  "AccEssKey",
+		SecretKey:  "SecRetKey",
+		bucketName: "BuKKiT",
 	}
-	connection, err := SetupConnection(testingConfig)
+	connection, err := testingConfig.SetupConnection()
 	assert.NoError(t, err)
 
 	assert.Equal(t, "AccEssKey", connection.Auth.AccessKey, "the Access Key should be the same")
@@ -70,91 +81,84 @@ func TestSetupConnection(t *testing.T) {
 }
 
 func TestSetupBucket(t *testing.T) {
-	testingConfig := runningConfig{
-		Pwd:       "/",
-		AccessKey: "AccEssKey",
-		SecretKey: "SecRetKey",
-		Bucket:    "BuKKiT",
+	testingConfig := &runningConfig{
+		Pwd:        "/",
+		AccessKey:  "AccEssKey",
+		SecretKey:  "SecRetKey",
+		bucketName: "BuKKiT",
 	}
-	bucket, err := SetupBucket(testingConfig)
+	err := testingConfig.SetupBucket()
 	assert.NoError(t, err)
 
-	assert.Equal(t, "AccEssKey", bucket.S3.Auth.AccessKey, "the Access Key should be the same")
-	assert.Equal(t, "SecRetKey", bucket.S3.Auth.SecretKey, "the Secret Key should be the same")
+	assert.Equal(t, "AccEssKey", testingConfig.bucket.S3.Auth.AccessKey, "the Access Key should be the same")
+	assert.Equal(t, "SecRetKey", testingConfig.bucket.S3.Auth.SecretKey, "the Secret Key should be the same")
 	//assert.Equal(t, "https://BuKKiT.objects.liquidweb.services", bucket.S3.Region.S3Endpoint, "the URL should be LW's")
-	assert.Equal(t, "https://objects.liquidweb.services", bucket.S3.Region.S3Endpoint, "the URL should be LW's")
-	assert.Equal(t, "liquidweb", bucket.S3.Region.Name, "the URL should be LW's")
-	assert.Equal(t, "bukkit", bucket.Name, "the name of the bucket is not being set correctly")
+	assert.Equal(t, "https://objects.liquidweb.services", testingConfig.bucket.S3.Region.S3Endpoint, "the URL should be LW's")
+	assert.Equal(t, "liquidweb", testingConfig.bucket.S3.Region.Name, "the URL should be LW's")
+	assert.Equal(t, "bukkit", testingConfig.bucket.Name, "the name of the bucket is not being set correctly")
 }
 
 func TestHiddenConfig(t *testing.T) {
-	testingConfig := loadTestingConfig(t)
+	testingConfig, _ := loadTestingConfig(t)
 	//connection := SetupConnection(testingConfig)
-	bucket, err := SetupBucket(testingConfig)
+	err := testingConfig.SetupBucket()
 	assert.NoError(t, err)
 
-	assert.Equal(t, testingConfig.AccessKey, bucket.S3.Auth.AccessKey, "the Access Key should be the same")
-	assert.Equal(t, testingConfig.SecretKey, bucket.S3.Auth.SecretKey, "the Secret Key should be the same")
-	assert.Equal(t, testingConfig.Bucket, bucket.Name, "the name of the bucket is not being set correctly")
-	assert.Equal(t, "https://objects.liquidweb.services", bucket.S3.Region.S3Endpoint, "the URL should be LW's")
-	assert.Equal(t, "liquidweb", bucket.S3.Region.Name, "the URL should be LW's")
+	assert.Equal(t, testingConfig.AccessKey, testingConfig.bucket.S3.Auth.AccessKey, "the Access Key should be the same")
+	assert.Equal(t, testingConfig.SecretKey, testingConfig.bucket.S3.Auth.SecretKey, "the Secret Key should be the same")
+	assert.Equal(t, testingConfig.bucketName, testingConfig.bucket.Name, "the name of the bucket is not being set correctly")
+	assert.Equal(t, "https://objects.liquidweb.services", testingConfig.bucket.S3.Region.S3Endpoint, "the URL should be LW's")
+	assert.Equal(t, "liquidweb", testingConfig.bucket.S3.Region.Name, "the URL should be LW's")
 }
 
 func TestValidBucket(t *testing.T) {
-	testingConfig := loadTestingConfig(t)
-	connection, err := SetupConnection(testingConfig)
+	testingConfig, _ := loadTestingConfig(t)
+	connection, err := testingConfig.SetupConnection()
 	assert.NoError(t, err)
 
 	_, err = connection.ListBuckets()
 	assert.NoError(t, err)
 
-	bucketExists, err := ValidBucket(testingConfig, connection)
+	bucketExists, err := ValidBucket(testingConfig.bucketName, connection)
 	assert.True(t, bucketExists, "the bucket should exist within the given space")
 	assert.NoError(t, err)
 
-	testingConfig.Bucket = "BadBucket"
-	bucketExists, err = ValidBucket(testingConfig, connection)
+	bucketExists, err = ValidBucket("BadBucket", connection)
 	assert.False(t, bucketExists, "the BadBucket should not exist within the given space")
 	assert.NoError(t, err)
 }
 
-func ExampleChdir() {
+func TestChdir(t *testing.T) {
+	outputBuf := bytes.Buffer{}
 	testingConfig := runningConfig{
-		Pwd:       "/",
-		AccessKey: "AccEssKey",
-		SecretKey: "SecRetKey",
-		Bucket:    "BuKKiT",
+		Pwd:        "/",
+		AccessKey:  "AccEssKey",
+		SecretKey:  "SecRetKey",
+		bucketName: "BuKKiT",
+		output:     &outputBuf,
 	}
-	bucket, _ := SetupBucket(testingConfig)
+
+	testingConfig.SetupBucket()
 
 	testingConfig.CmdParams = []string{"/"}
-	Chdir(testingConfig, bucket)
+	testingConfig.Chdir(testingConfig.CmdParams[0])
 
 	testingConfig.CmdParams = []string{"/folderthatdoesnotexist"}
-	Chdir(testingConfig, bucket)
+	testingConfig.Chdir(testingConfig.CmdParams[0])
 
 	testingConfig.CmdParams = []string{"/testing"}
-	Chdir(testingConfig, bucket)
-	// Output:
-	// /
-	// /folderthatdoesnotexist
-	// /testing
+	testingConfig.Chdir(testingConfig.CmdParams[0])
+
+	goldie.Assert(t, t.Name(), outputBuf.Bytes())
 }
 
 func TestLsdir(t *testing.T) {
-	testingConfig := loadTestingConfig(t)
-	bucket, err := SetupBucket(testingConfig)
+	testingConfig, outputBuf := loadTestingConfig(t)
+	err := testingConfig.SetupBucket()
 	assert.NoError(t, err)
 
-	testingConfig.CmdParams = []string{"/"}
-	err = Lsdir(testingConfig, bucket)
+	err = testingConfig.Lsdir("/")
 	assert.NoError(t, err)
 
-	//testingConfig.CmdParams = []string{"/folderthatdoesnotexist"}
-	//Lsdir(testingConfig, bucket)
-
-	//testingConfig.CmdParams = []string{"/stuff"}
-	//Lsdir(testingConfig, bucket)
-	// Output
-	// this is not the correct output
+	goldie.Assert(t, t.Name(), outputBuf.Bytes())
 }

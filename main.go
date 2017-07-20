@@ -26,12 +26,14 @@ const pagesize = 1000
 const chunkSize = 33554432 // 32M in bytes
 
 type runningConfig struct {
-	Command   string
-	Pwd       string
-	Bucket    string
-	CmdParams []string
-	AccessKey string
-	SecretKey string
+	Command    string
+	Pwd        string
+	bucketName string
+	CmdParams  []string
+	AccessKey  string
+	SecretKey  string
+	bucket     s3.Bucket
+	output     io.Writer
 }
 
 func getConfig() runningConfig {
@@ -40,7 +42,7 @@ func getConfig() runningConfig {
 	// binary Command Pwd [CmdParams ...] Bucket AccessKey
 	config.Command = os.Args[1]
 	//Pwd := os.Args[2]
-	config.Bucket = os.Args[len(os.Args)-2]
+	config.bucketName = os.Args[len(os.Args)-2]
 	config.AccessKey = os.Args[len(os.Args)-1]
 
 	config.CmdParams = os.Args[3 : len(os.Args)-2]
@@ -48,75 +50,78 @@ func getConfig() runningConfig {
 	// SecretKey is passed via enviroment variable
 	config.SecretKey = os.Getenv("PASSWORD")
 
+	config.output = os.Stdout
+
 	return *config
 }
 
-func SetupConnection(config runningConfig) (*s3.S3, error) {
+func (c *runningConfig) SetupBucket() error {
+	connection, err := c.SetupConnection()
+	if err != nil {
+		return err
+	}
+
+	c.bucket = *connection.Bucket(c.bucketName)
+	return nil
+}
+
+func (c *runningConfig) SetupConnection() (*s3.S3, error) {
 	bucketRegion := aws.Region{
 		Name:              "liquidweb",
 		S3Endpoint:        "https://objects.liquidweb.services",
 		S3LowercaseBucket: true,
 	}
 
-	bucketAuth, err := aws.GetAuth(config.AccessKey, config.SecretKey)
+	bucketAuth, err := aws.GetAuth(c.AccessKey, c.SecretKey)
 	if err != nil {
-		return nil, fmt.Errorf("Problem creating Authentication %s - %v", config.AccessKey, err)
+		return nil, fmt.Errorf("Problem creating Authentication %s - %v", c.AccessKey, err)
 	}
 
 	return s3.New(bucketAuth, bucketRegion), nil
 }
 
-func ValidBucket(config runningConfig, connection *s3.S3) (bool, error) {
+func ValidBucket(bucketName string, connection *s3.S3) (bool, error) {
 	allBuckets, err := connection.ListBuckets()
 	if err != nil {
 		return false, fmt.Errorf("problem listing buckets - %v", err)
 	}
-	bucketExists := false
 
-	for _, Bucket := range allBuckets.Buckets {
-		if Bucket.Name == config.Bucket {
+	var bucketExists bool
+	for _, bucket := range allBuckets.Buckets {
+		if bucket.Name == bucketName {
 			bucketExists = true
 		}
 	}
 	return bucketExists, nil
 }
 
-func SetupBucket(config runningConfig) (s3.Bucket, error) {
-	connection, err := SetupConnection(config)
-	if err != nil {
-		return s3.Bucket{}, err
-	}
-
-	b := *connection.Bucket(config.Bucket)
-	return b, nil
-}
-
-func callFunc(config runningConfig, Bucket s3.Bucket) {
+func (c *runningConfig) callFunc() error {
 	// call the function with the name of the Command that you got
 
-	switch config.Command {
-	case "get":
-		magicGet(config, Bucket)
-	case "put":
-		magicPut(config, Bucket)
-	case "ls":
-		Lsdir(config, Bucket)
-	case "mkdir":
+	switch c.Command {
 	case "chdir":
-		Chdir(config, Bucket)
+		return c.Chdir(c.CmdParams[0])
+	case "ls":
+		return c.Lsdir(c.CmdParams[0])
+	case "get":
+		return c.magicGet(c.CmdParams[1], c.CmdParams[0])
+	case "put":
+		return c.magicPut(c.CmdParams[1], c.CmdParams[0])
+	case "mkdir":
 	case "rmdir":
-		rmdir(config, Bucket)
+		return c.rmdir(c.CmdParams[0])
 	case "delete":
-		delete(config, Bucket)
+		return c.delete(c.CmdParams[0])
 	}
+	return nil
 }
 
 // does almost nothing - not required, but must return the path
 // cli: `binary` `chdir` `Pwd` `path` `bucketName` `username`
-func Chdir(config runningConfig, Bucket s3.Bucket) error {
-	_, err := fmt.Println(config.CmdParams[0])
+func (c *runningConfig) Chdir(dir string) error {
+	_, err := fmt.Fprintln(c.output, dir)
 	if err != nil {
-		return fmt.Errorf("failed to print the given path %s - %v", config.CmdParams[9], err)
+		return fmt.Errorf("failed to print the given path %s - %v", dir, err)
 	}
 	return nil
 }
@@ -124,17 +129,18 @@ func Chdir(config runningConfig, Bucket s3.Bucket) error {
 // lists the content of a directory on the remote system
 // cli: `binary` `ls` `Pwd` `path` `bucketName` `username`
 // passed to this is ["path"]
-func Lsdir(config runningConfig, Bucket s3.Bucket) error {
-	items, err := Bucket.List(config.CmdParams[0], "/", "", pagesize)
+func (c *runningConfig) Lsdir(dir string) error {
+	items, err := c.bucket.List(dir, "/", "", pagesize)
 	if err != nil {
-		return fmt.Errorf("failed to list the contents of path %s - %v", config.CmdParams[0], err)
+		return fmt.Errorf("failed to list the contents of path %s - %v", dir, err)
 	}
 	for _, target := range items.Contents {
 		// prints out in the format defined by:
 		// "-rwxr-xr-1 root root 3171 Jan 18 12:23 temp.txt"
-		_, err = fmt.Printf("-rwxr-xr-1 %s %s %d Jan 18 12:23 %s", target.Owner, target.Owner, target.Size, target.Key)
+		_, err = fmt.Fprintf(c.output, "-rwxr-xr-1 %s %s %d Jan 18 12:23 %s",
+			target.Owner, target.Owner, target.Size, target.Key)
 		if err != nil {
-			panic(fmt.Sprintf("failed display the file %s - %s", target.Key, err.Error()))
+			return fmt.Errorf("failed display the file %s - %v", target.Key, err)
 		}
 	}
 	return nil
@@ -143,62 +149,69 @@ func Lsdir(config runningConfig, Bucket s3.Bucket) error {
 // Gets a file from the remote location and puts it on the local system
 // cli: `binary` `get` `Pwd `Remote file` `local file` `bucketName` `username`
 // passed to this is ["remote file", "local file"]
-func get(config runningConfig, Bucket s3.Bucket) {
+func (c *runningConfig) get(local, remote string) error {
 	//data := new(Buffer)
-	data, err := Bucket.Get(config.CmdParams[0])
+	data, err := c.bucket.Get(remote)
 	if err != nil {
-		panic(fmt.Sprintf("error loading remote file %s - %s", config.CmdParams[0], err.Error()))
+		return fmt.Errorf("error loading remote file %s - %v", remote, err)
 	}
-	err = ioutil.WriteFile(config.CmdParams[1], data, 0644)
+	err = ioutil.WriteFile(local, data, 0644)
 	if err != nil {
-		panic(fmt.Sprintf("error writing local file %s - %s", config.CmdParams[1], err.Error()))
+		return fmt.Errorf("error writing local file %s - %v", local, err)
 	}
+	return nil
 }
 
-func magicGet(config runningConfig, Bucket s3.Bucket) {
+// Gets a larger file from the remote location and puts it on the local system
+// cli: `binary` `get` `Pwd `Remote file` `local file` `bucketName` `username`
+// passed to this is ["remote file", "local file"]
+func (c *runningConfig) magicGet(local, remote string) error {
 	// open up the output file for writing
-	outFile, err := os.Create(config.CmdParams[1])
+	outFile, err := os.Create(local)
 	defer outFile.Close()
 	if err != nil {
-		panic(fmt.Sprintf("error writing to local file %s - %s", config.CmdParams[1], err.Error()))
+		return fmt.Errorf("error writing to local file %s - %v", local, err)
 	}
 
 	// open up the remote file for reading
-	dataResponse, err := Bucket.GetResponse(config.CmdParams[0])
+	dataResponse, err := c.bucket.GetResponse(remote)
 	defer dataResponse.Body.Close()
 	if err != nil {
-		panic(fmt.Sprintf("error loading remote file %s - %s", config.CmdParams[0], err.Error()))
+		return fmt.Errorf("error loading remote file %s - %v", remote, err)
 	}
 
 	// copy all bytes, without loading stuff in memory, then defer close happen
 	_, err = io.Copy(outFile, dataResponse.Body)
 	if err != nil {
-		panic(fmt.Sprintf("error writing to local file %s - %s", config.CmdParams[1], err.Error()))
+		return fmt.Errorf("error writing to local file %s - %v", local, err)
 	}
+
+	return nil
 }
 
 // puts a file from the local location to a remote location
 // cli: `binary` `put` `Pwd `local file` `remote file` `bucketName` `username`
-func put(config runningConfig, Bucket s3.Bucket) {
+func (c *runningConfig) put(remote, local string) error {
 	//data := new(Buffer)
-	data, err := ioutil.ReadFile(config.CmdParams[0])
+	data, err := ioutil.ReadFile(local)
 	if err != nil {
-		panic(fmt.Sprintf("error loading local file %s - %s", config.CmdParams[0], err.Error()))
+		return fmt.Errorf("error loading local file %s - %v", local, err)
 	}
-	err = Bucket.Put(config.CmdParams[1], data, contentType, "0644")
+	err = c.bucket.Put(remote, data, contentType, "0644")
 	if err != nil {
-		panic(fmt.Sprintf("error writing remote file %s - %s", config.CmdParams[1], err.Error()))
+		return fmt.Errorf("error writing remote file %s - %v", remote, err)
 	}
+	return nil
 }
 
-// puts a file from the local location to a remote location by pieces
+// puts a larger file from the local location to a remote location by pieces
 // cli: `binary` `put` `Pwd `local file` `remote file` `bucketName` `username`
-func magicPut(config runningConfig, Bucket s3.Bucket) {
+func (c *runningConfig) magicPut(remote, local string) error {
 	// open the file to be transferred
-	file, err := os.Open(config.CmdParams[0])
+	file, err := os.Open(local)
 	defer file.Close()
 	if err != nil {
-		panic(fmt.Sprintf("error loading local file %s - %s", config.CmdParams[0], err.Error()))
+		return fmt.Errorf("error loading local file %s - %v", local, err)
 	}
 
 	bytes := make([]byte, chunkSize)
@@ -206,64 +219,70 @@ func magicPut(config runningConfig, Bucket s3.Bucket) {
 	// at most, buffer.Read can only read len(bytes) bytes
 	_, err = buffer.Read(bytes)
 	if err != nil {
-		panic(fmt.Sprintf("error reading from local file %s - %s", config.CmdParams[0], err.Error()))
+		return fmt.Errorf("error reading from local file %s - %v", local, err)
 	}
 
 	// determine the filetype based on the bytes you read
 	filetype := http.DetectContentType(bytes)
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		return fmt.Errorf("error resetting local file %s - %v", local, err)
+	}
 
 	// set up for multipart upload
-	multiUploader, err := Bucket.InitMulti(config.CmdParams[1], filetype, s3.ACL("private"))
+	multiUploader, err := c.bucket.InitMulti(remote, filetype, s3.ACL("private"))
 	if err != nil {
-		panic(fmt.Sprintf("error opening remote file %s - %s", config.CmdParams[1], err.Error()))
+		return fmt.Errorf("error opening remote file %s - %v", remote, err)
 	}
 
 	// upload all of the file in pieces
 	parts, err := multiUploader.PutAll(file, chunkSize)
 	if err != nil {
-		panic(fmt.Sprintf("error writing to remote file %s - %s", config.CmdParams[1], err.Error()))
+		return fmt.Errorf("error writing to remote file %s - %v", local, err)
 	}
 
 	// complete the file
 	err = multiUploader.Complete(parts)
 	if err != nil {
-		panic(fmt.Sprintf("error completing file %s - %s", config.CmdParams[1], err.Error()))
+		return fmt.Errorf("error completing file %s - %v", remote, err)
 	}
 
-	return
+	return nil
 }
 
 // removes everything under the given path on the remote Bucket
 // cli: `binary` `rmdir` `Pwd` `path` `bucketName` `username`
 // passed to this is ["path"]
-func rmdir(config runningConfig, Bucket s3.Bucket) {
-	items, err := Bucket.List(config.CmdParams[0], "", "", pagesize)
+func (c *runningConfig) rmdir(target string) error {
+	items, err := c.bucket.List(target, "", "", pagesize)
 	if err != nil {
-		panic(fmt.Sprintf("error listing path %s - %s", config.CmdParams[0], err.Error()))
+		return fmt.Errorf("error listing path %s - %v", target, err)
 	}
 	for len(items.Contents) > 0 {
 		for _, target := range items.Contents {
-			err = Bucket.Del(target.Key)
+			err = c.bucket.Del(target.Key)
 			if err != nil {
-				panic(fmt.Sprintf("error removing remote %s - %s", target.Key, err.Error()))
+				return fmt.Errorf("error removing remote %s - %v", target.Key, err)
 			}
 		}
 		// check to make sure everything is gone
-		items, err = Bucket.List(config.CmdParams[0], "", "", pagesize)
+		items, err = c.bucket.List(target, "", "", pagesize)
 		if err != nil {
-			panic(fmt.Sprintf("error listing path %s - %s", config.CmdParams[0], err.Error()))
+			return fmt.Errorf("error listing path %s - %v", target, err)
 		}
 	}
+	return nil
 }
 
 // removes a file at a given location
 // cli: `delete` `rmdir` `Pwd` `path` `bucketName` `username`
 // passed to this is ["path"]
-func delete(config runningConfig, Bucket s3.Bucket) {
-	err := Bucket.Del(config.CmdParams[0])
+func (c *runningConfig) delete(remote string) error {
+	err := c.bucket.Del(remote)
 	if err != nil {
-		panic(fmt.Sprintf("failed to delete %s", config.CmdParams[0], err.Error()))
+		return fmt.Errorf("failed to delete %s - %v", remote, err)
 	}
+	return nil
 }
 
 func main() {
@@ -271,10 +290,10 @@ func main() {
 	config := getConfig()
 
 	//connection := SetupConnection(config)
-	bucket, err := SetupBucket(config)
+	err := config.SetupBucket()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	callFunc(config, bucket)
+	config.callFunc()
 }

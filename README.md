@@ -1,5 +1,6 @@
-cPanelToObjectStore
-===================
+# cPanelToObjectStore
+
+[![Build Status](https://travis-ci.org/jakdept/cPanelToObjectStore.svg?branch=master)](https://travis-ci.org/jakdept/cPanelToObjectStore)
 
 **_This is experimental for the time being_**
 
@@ -27,13 +28,13 @@ Eventually, a compiled binary will be available to copy to the host system, and 
 
 ## Testing ##
 
-You can run some (limited) tests without a valid configuration for Liquidweb's Object Storage, however in order to run all tests you need a valid configuration. This configuraiton should be in a file called "testConfig.json" and should look something like example.testConfig.json.
+You can run some (limited) tests without a valid configuration for Liquidweb's Object Storage, however in order to run all tests you need a valid configuration. This configuration should be stored in env vars - I use the following file (called testConfig.json) locally to set them up:
 
-```json
-{
-  "pwd": "/",
-  "accessKey": "accessKey",
-  "secretKey": "secretKey",
-  "bucketName": "bucketName",
-}
+```bash
+export PWD="/"
+export ACCESSKEY="accessKey"
+export SECRETKEY="secretKey"
+export BUCKET="bucketName"
 ```
+
+This can then be pulled in (as long as it has executable) with `source testConfig.json`.
