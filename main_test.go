@@ -157,17 +157,6 @@ func TestChdir(t *testing.T) {
 	goldie.Assert(t, t.Name(), outputBuf.Bytes())
 }
 
-func TestLsdir(t *testing.T) {
-	testingConfig, outputBuf := loadTestingConfig(t)
-	err := testingConfig.SetupBucket()
-	assert.NoError(t, err)
-
-	err = testingConfig.Lsdir("/")
-	assert.NoError(t, err)
-
-	goldie.Assert(t, t.Name(), outputBuf.Bytes())
-}
-
 func TestRemoteFolder(t *testing.T) {
 	files := []string{
 		"thank_you_for_not_loitering.jpg",
@@ -213,7 +202,7 @@ func TestRemoteFolder(t *testing.T) {
 		local := filepath.Join(tmpdir, file)
 		remote := filepath.Join("testdata", file)
 		// #TODO# remove me
-		fmt.Fprintf(testingConfig.output, "pulling remote [%s] into local [%s]\n", remote, local)
+		// fmt.Fprintf(testingConfig.output, "pulling remote [%s] into local [%s]\n", remote, local)
 
 		err = testingConfig.magicGet(local, remote)
 		assert.NoError(t, err)
@@ -225,8 +214,15 @@ func TestRemoteFolder(t *testing.T) {
 
 		fmt.Fprintf(testingConfig.output, "[%d] %s\n", fi.Size(), fi.Name())
 	}
-
 	fmt.Fprintln(testingConfig.output, "contents before removal")
+
+	err = testingConfig.Lsdir("testdata")
+	assert.NoError(t, err)
+
+	fmt.Fprintln(testingConfig.output, "removing the first file")
+
+	err = testingConfig.delete(filepath.Join("testdata", files[0]))
+	assert.NoError(t, err)
 
 	err = testingConfig.Lsdir("testdata")
 	assert.NoError(t, err)
