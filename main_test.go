@@ -21,7 +21,7 @@ func init() {
 	goldie.FixtureDir = "testdata/fixtures"
 }
 
-func loadTestingConfig(t *testing.T) (*runningConfig, bytes.Buffer) {
+func loadTestingConfig(t *testing.T) (*runningConfig, *bytes.Buffer) {
 	testingConfig := new(runningConfig)
 	testingConfig.Pwd = os.Getenv("PWD")
 	testingConfig.AccessKey = os.Getenv("ACCESSKEY")
@@ -38,7 +38,7 @@ func loadTestingConfig(t *testing.T) (*runningConfig, bytes.Buffer) {
 	outputBuf := bytes.Buffer{}
 	testingConfig.output = &outputBuf
 
-	return testingConfig, outputBuf
+	return testingConfig, &outputBuf
 }
 
 func TestGetConfig(t *testing.T) {
@@ -182,7 +182,7 @@ func TestRemoteFolder(t *testing.T) {
 	err := testingConfig.SetupBucket()
 	assert.NoError(t, err)
 
-	testingConfig.output = os.Stderr
+	// testingConfig.output = os.Stderr
 
 	err = testingConfig.Rmdir("/testdata")
 	assert.NoError(t, err)
@@ -238,8 +238,6 @@ func TestRemoteFolder(t *testing.T) {
 
 	err = testingConfig.Lsdir("testdata")
 	assert.NoError(t, err)
-
-	t.Skip()
 
 	goldie.Assert(t, t.Name(), outputBuf.Bytes())
 }
