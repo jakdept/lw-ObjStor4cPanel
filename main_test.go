@@ -2,8 +2,13 @@ package main
 
 import (
 	"bytes"
+	"fmt"
+	"io/ioutil"
 	"os"
+	"path"
+	"path/filepath"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/assert"
 	//"os"
 	//"reflect"
@@ -16,7 +21,7 @@ func init() {
 	goldie.FixtureDir = "testdata/fixtures"
 }
 
-func loadTestingConfig(t *testing.T) (*runningConfig, bytes.Buffer) {
+func loadTestingConfig(t *testing.T) (*runningConfig, *bytes.Buffer) {
 	testingConfig := new(runningConfig)
 	testingConfig.Pwd = os.Getenv("PWD")
 	testingConfig.AccessKey = os.Getenv("ACCESSKEY")
@@ -33,7 +38,7 @@ func loadTestingConfig(t *testing.T) (*runningConfig, bytes.Buffer) {
 	outputBuf := bytes.Buffer{}
 	testingConfig.output = &outputBuf
 
-	return testingConfig, outputBuf
+	return testingConfig, &outputBuf
 }
 
 func TestGetConfig(t *testing.T) {
@@ -152,13 +157,90 @@ func TestChdir(t *testing.T) {
 	goldie.Assert(t, t.Name(), outputBuf.Bytes())
 }
 
-func TestLsdir(t *testing.T) {
+func TestRemoteFolder(t *testing.T) {
+	files := []string{
+		"thank_you_for_not_loitering.jpg",
+		"database.tar.gz",
+	}
+
+	for i := 0; i < len(files); i++ {
+		files[i] = path.Clean(files[i])
+	}
+
 	testingConfig, outputBuf := loadTestingConfig(t)
 	err := testingConfig.SetupBucket()
 	assert.NoError(t, err)
 
-	err = testingConfig.Lsdir("/")
+	// testingConfig.output = os.Stderr
+
+	err = testingConfig.Rmdir("/testdata")
+	assert.NoError(t, err)
+
+	err = testingConfig.Mkdir("/testdata")
+	assert.NoError(t, err)
+
+	for _, file := range files {
+		local := filepath.Join("testdata", file)
+		remote := filepath.Join("testdata", file)
+		fmt.Fprintf(testingConfig.output, "\nputting local [%s] into remote [%s]\n", local, remote)
+
+		err = testingConfig.magicPut(remote, local)
+		assert.NoError(t, err)
+		err = testingConfig.Lsdir("testdata")
+		assert.NoError(t, err)
+	}
+	// #TODO# remove me
+	// ralph(testingConfig, "", "", "")
+
+	tmpdir, err := ioutil.TempDir("", "cPanel_backup_transporter")
+	assert.NoError(t, err)
+
+	// #TODO# remove me
+	// fmt.Fprintf(testingConfig.output, "working with temp directory [%s]\n", tmpdir)
+
+	for _, file := range files {
+		local := filepath.Join(tmpdir, file)
+		remote := filepath.Join("testdata", file)
+		// #TODO# remove me
+		// fmt.Fprintf(testingConfig.output, "pulling remote [%s] into local [%s]\n", remote, local)
+
+		err = testingConfig.magicGet(local, remote)
+		assert.NoError(t, err)
+	}
+
+	for _, file := range files {
+		fi, err := os.Stat(filepath.Join(tmpdir, file))
+		assert.NoError(t, err)
+
+		fmt.Fprintf(testingConfig.output, "[%d] %s\n", fi.Size(), fi.Name())
+	}
+	fmt.Fprintln(testingConfig.output, "contents before removal")
+
+	err = testingConfig.Lsdir("testdata")
+	assert.NoError(t, err)
+
+	fmt.Fprintln(testingConfig.output, "removing the first file")
+
+	err = testingConfig.delete(filepath.Join("testdata", files[0]))
+	assert.NoError(t, err)
+
+	err = testingConfig.Lsdir("testdata")
+	assert.NoError(t, err)
+
+	err = testingConfig.Rmdir("testdata")
+	assert.NoError(t, err)
+
+	fmt.Fprintln(testingConfig.output, "contents after removal")
+
+	err = testingConfig.Lsdir("testdata")
 	assert.NoError(t, err)
 
 	goldie.Assert(t, t.Name(), outputBuf.Bytes())
+}
+
+func ralph(c *runningConfig, prefix, delim, marker string) {
+	stuff, err := c.bucket.List(prefix, delim, marker, 1000)
+	if err == nil {
+		spew.Dump(stuff)
+	}
 }

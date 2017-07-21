@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"strings"
 	//"log"
 	"net/http"
 	"os"
@@ -108,15 +109,26 @@ func (c *runningConfig) callFunc() error {
 	case "put":
 		return c.magicPut(c.CmdParams[1], c.CmdParams[0])
 	case "mkdir":
+		return c.Mkdir(c.CmdParams[0])
 	case "rmdir":
-		return c.rmdir(c.CmdParams[0])
+		return c.Rmdir(c.CmdParams[0])
 	case "delete":
 		return c.delete(c.CmdParams[0])
 	}
 	return nil
 }
 
-// does almost nothing - not required, but must return the path
+// Mkdir creates a given folder on the remote server
+// cli: `binary` `chdir` `Pwd` `path` `bucketName` `username`
+func (c *runningConfig) Mkdir(dir string) error {
+	// err := c.bucket.Put(dir, []byte{}, contentType, "0700")
+	// if err != nil {
+	// 	return fmt.Errorf("failed to create the given folder %s - %v", dir, err)
+	// }
+	return nil
+}
+
+// Chdir does almost nothing - not required, but must return the path.
 // cli: `binary` `chdir` `Pwd` `path` `bucketName` `username`
 func (c *runningConfig) Chdir(dir string) error {
 	_, err := fmt.Fprintln(c.output, dir)
@@ -130,15 +142,20 @@ func (c *runningConfig) Chdir(dir string) error {
 // cli: `binary` `ls` `Pwd` `path` `bucketName` `username`
 // passed to this is ["path"]
 func (c *runningConfig) Lsdir(dir string) error {
+	if !strings.HasSuffix(dir, string(os.PathSeparator)) {
+		dir = dir + string(os.PathSeparator)
+	}
+
 	items, err := c.bucket.List(dir, "/", "", pagesize)
 	if err != nil {
 		return fmt.Errorf("failed to list the contents of path %s - %v", dir, err)
 	}
+
 	for _, target := range items.Contents {
 		// prints out in the format defined by:
 		// "-rwxr-xr-1 root root 3171 Jan 18 12:23 temp.txt"
-		_, err = fmt.Fprintf(c.output, "-rwxr-xr-1 %s %s %d Jan 18 12:23 %s",
-			target.Owner, target.Owner, target.Size, target.Key)
+		_, err = fmt.Fprintf(c.output, "-rwxr-xr-1 %s %s %d Jan 18 12:23 %s\n",
+			target.Owner.ID, target.Owner.ID, target.Size, target.Key)
 		if err != nil {
 			return fmt.Errorf("failed display the file %s - %v", target.Key, err)
 		}
@@ -251,9 +268,9 @@ func (c *runningConfig) magicPut(remote, local string) error {
 }
 
 // removes everything under the given path on the remote Bucket
-// cli: `binary` `rmdir` `Pwd` `path` `bucketName` `username`
+// cli: `binary` `Rmdir` `Pwd` `path` `bucketName` `username`
 // passed to this is ["path"]
-func (c *runningConfig) rmdir(target string) error {
+func (c *runningConfig) Rmdir(target string) error {
 	items, err := c.bucket.List(target, "", "", pagesize)
 	if err != nil {
 		return fmt.Errorf("error listing path %s - %v", target, err)
