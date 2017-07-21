@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/assert"
 	//"os"
 	//"reflect"
@@ -191,23 +192,27 @@ func TestRemoteFolder(t *testing.T) {
 
 	for _, file := range files {
 		local := filepath.Join("testdata", file)
-		remote := filepath.Join(string(os.PathSeparator), "testdata", file)
-		fmt.Fprintf(testingConfig.output, "putting local [%s] into remote [%s]\n", local, remote)
+		remote := filepath.Join("testdata", file)
+		fmt.Fprintf(testingConfig.output, "\nputting local [%s] into remote [%s]\n", local, remote)
 
 		err = testingConfig.magicPut(remote, local)
 		assert.NoError(t, err)
-		err = testingConfig.Lsdir("/testdata")
+		err = testingConfig.Lsdir("testdata")
 		assert.NoError(t, err)
 	}
+	// #TODO# remove me
+	// ralph(testingConfig, "", "", "")
 
 	tmpdir, err := ioutil.TempDir("", "cPanel_backup_transporter")
 	assert.NoError(t, err)
 
-	fmt.Fprintf(testingConfig.output, "working with temp directory [%s]\n", tmpdir)
+	// #TODO# remove me
+	// fmt.Fprintf(testingConfig.output, "working with temp directory [%s]\n", tmpdir)
 
 	for _, file := range files {
 		local := filepath.Join(tmpdir, file)
-		remote := filepath.Join(string(os.PathSeparator), "testdata", file)
+		remote := filepath.Join("testdata", file)
+		// #TODO# remove me
 		fmt.Fprintf(testingConfig.output, "pulling remote [%s] into local [%s]\n", remote, local)
 
 		err = testingConfig.magicGet(local, remote)
@@ -223,18 +228,25 @@ func TestRemoteFolder(t *testing.T) {
 
 	fmt.Fprintln(testingConfig.output, "contents before removal")
 
-	err = testingConfig.Lsdir("/testdata")
+	err = testingConfig.Lsdir("testdata")
 	assert.NoError(t, err)
 
-	err = testingConfig.Rmdir("/testdata")
+	err = testingConfig.Rmdir("testdata")
 	assert.NoError(t, err)
 
 	fmt.Fprintln(testingConfig.output, "contents after removal")
 
-	err = testingConfig.Lsdir("/testdata")
+	err = testingConfig.Lsdir("testdata")
 	assert.NoError(t, err)
 
 	t.Skip()
 
 	goldie.Assert(t, t.Name(), outputBuf.Bytes())
+}
+
+func ralph(c *runningConfig, prefix, delim, marker string) {
+	stuff, err := c.bucket.List(prefix, delim, marker, 1000)
+	if err == nil {
+		spew.Dump(stuff)
+	}
 }

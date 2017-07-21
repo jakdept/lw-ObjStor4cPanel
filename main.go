@@ -150,11 +150,12 @@ func (c *runningConfig) Lsdir(dir string) error {
 	if err != nil {
 		return fmt.Errorf("failed to list the contents of path %s - %v", dir, err)
 	}
+
 	for _, target := range items.Contents {
 		// prints out in the format defined by:
 		// "-rwxr-xr-1 root root 3171 Jan 18 12:23 temp.txt"
-		_, err = fmt.Fprintf(c.output, "-rwxr-xr-1 %s %s %d Jan 18 12:23 %s",
-			target.Owner, target.Owner, target.Size, target.Key)
+		_, err = fmt.Fprintf(c.output, "-rwxr-xr-1 %s %s %d Jan 18 12:23 %s\n",
+			target.Owner.ID, target.Owner.ID, target.Size, target.Key)
 		if err != nil {
 			return fmt.Errorf("failed display the file %s - %v", target.Key, err)
 		}
