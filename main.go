@@ -7,7 +7,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"strings"
 	//"log"
@@ -163,22 +162,6 @@ func (c *runningConfig) Lsdir(dir string) error {
 	return nil
 }
 
-// Gets a file from the remote location and puts it on the local system
-// cli: `binary` `get` `Pwd `Remote file` `local file` `bucketName` `username`
-// passed to this is ["remote file", "local file"]
-func (c *runningConfig) get(local, remote string) error {
-	//data := new(Buffer)
-	data, err := c.bucket.Get(remote)
-	if err != nil {
-		return fmt.Errorf("error loading remote file %s - %v", remote, err)
-	}
-	err = ioutil.WriteFile(local, data, 0644)
-	if err != nil {
-		return fmt.Errorf("error writing local file %s - %v", local, err)
-	}
-	return nil
-}
-
 // Gets a larger file from the remote location and puts it on the local system
 // cli: `binary` `get` `Pwd `Remote file` `local file` `bucketName` `username`
 // passed to this is ["remote file", "local file"]
@@ -203,21 +186,6 @@ func (c *runningConfig) magicGet(local, remote string) error {
 		return fmt.Errorf("error writing to local file %s - %v", local, err)
 	}
 
-	return nil
-}
-
-// puts a file from the local location to a remote location
-// cli: `binary` `put` `Pwd `local file` `remote file` `bucketName` `username`
-func (c *runningConfig) put(remote, local string) error {
-	//data := new(Buffer)
-	data, err := ioutil.ReadFile(local)
-	if err != nil {
-		return fmt.Errorf("error loading local file %s - %v", local, err)
-	}
-	err = c.bucket.Put(remote, data, contentType, "0644")
-	if err != nil {
-		return fmt.Errorf("error writing remote file %s - %v", remote, err)
-	}
 	return nil
 }
 
