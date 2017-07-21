@@ -1,15 +1,15 @@
 
 putting local [testdata/thank_you_for_not_loitering.jpg] into remote [testdata/thank_you_for_not_loitering.jpg]
--rwxr-xr-1 SFXX98 SFXX98 46379 Jan 18 12:23 testdata/thank_you_for_not_loitering.jpg
+-rwxr-xr-x SFXX98 SFXX98 46379 Jan 18 12:23 testdata/thank_you_for_not_loitering.jpg
 
 putting local [testdata/database.tar.gz] into remote [testdata/database.tar.gz]
--rwxr-xr-1 SFXX98 SFXX98 1990 Jan 18 12:23 testdata/database.tar.gz
--rwxr-xr-1 SFXX98 SFXX98 46379 Jan 18 12:23 testdata/thank_you_for_not_loitering.jpg
+-rwxr-xr-x SFXX98 SFXX98 1990 Jan 18 12:23 testdata/database.tar.gz
+-rwxr-xr-x SFXX98 SFXX98 46379 Jan 18 12:23 testdata/thank_you_for_not_loitering.jpg
 [46379] thank_you_for_not_loitering.jpg
 [1990] database.tar.gz
 contents before removal
--rwxr-xr-1 SFXX98 SFXX98 1990 Jan 18 12:23 testdata/database.tar.gz
--rwxr-xr-1 SFXX98 SFXX98 46379 Jan 18 12:23 testdata/thank_you_for_not_loitering.jpg
+-rwxr-xr-x SFXX98 SFXX98 1990 Jan 18 12:23 testdata/database.tar.gz
+-rwxr-xr-x SFXX98 SFXX98 46379 Jan 18 12:23 testdata/thank_you_for_not_loitering.jpg
 removing the first file
--rwxr-xr-1 SFXX98 SFXX98 1990 Jan 18 12:23 testdata/database.tar.gz
+-rwxr-xr-x SFXX98 SFXX98 1990 Jan 18 12:23 testdata/database.tar.gz
 contents after removal
