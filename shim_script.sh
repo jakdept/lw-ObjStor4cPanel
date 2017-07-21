@@ -7,6 +7,4 @@ fi
 
 echo $@ >> /var/log/cpbackuptrans.log
 
-shift
-
 /scripts/cPanelToObjectStore $@
