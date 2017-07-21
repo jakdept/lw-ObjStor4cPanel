@@ -153,7 +153,7 @@ func (c *runningConfig) Lsdir(dir string) error {
 	for _, target := range items.Contents {
 		// prints out in the format defined by:
 		// "-rwxr-xr-1 root root 3171 Jan 18 12:23 temp.txt"
-		_, err = fmt.Fprintf(c.output, "-rwxr-xr-1 %s %s %d Jan 18 12:23 %s\n",
+		_, err = fmt.Fprintf(c.output, "-rwxr-xr-x %s %s %d Jan 18 12:23 %s\n",
 			target.Owner.ID, target.Owner.ID, target.Size, target.Key)
 		if err != nil {
 			return fmt.Errorf("failed display the file %s - %v", target.Key, err)
