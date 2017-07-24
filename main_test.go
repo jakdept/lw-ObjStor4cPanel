@@ -156,6 +156,15 @@ func TestChdir(t *testing.T) {
 	goldie.Assert(t, t.Name(), outputBuf.Bytes())
 }
 
+func testList(t *testing.T, c *runningConfig) {
+	items, err := c.bucket.List("testdata/", "/", "", pagesize)
+	assert.NoError(t, err)
+
+	for _, target := range items.Contents {
+		fmt.Fprintf(c.output, "%d [%s]\n", target.Size, target.Key)
+	}
+}
+
 func TestRemoteFolder(t *testing.T) {
 	files := []string{
 		"thank_you_for_not_loitering.jpg",
@@ -170,10 +179,10 @@ func TestRemoteFolder(t *testing.T) {
 	err := testingConfig.SetupBucket()
 	assert.NoError(t, err)
 
-	err = testingConfig.Rmdir("/testdata")
+	err = testingConfig.Rmdir("testdata")
 	assert.NoError(t, err)
 
-	err = testingConfig.Mkdir("/testdata")
+	err = testingConfig.Mkdir("testdata")
 	assert.NoError(t, err)
 
 	for _, file := range files {
@@ -183,8 +192,8 @@ func TestRemoteFolder(t *testing.T) {
 
 		err = testingConfig.magicPut(remote, local)
 		assert.NoError(t, err)
-		err = testingConfig.Lsdir("testdata")
-		assert.NoError(t, err)
+
+		testList(t, testingConfig)
 	}
 
 	tmpdir, err := ioutil.TempDir("", "cPanel_backup_transporter")
@@ -206,24 +215,21 @@ func TestRemoteFolder(t *testing.T) {
 	}
 	fmt.Fprintln(testingConfig.output, "contents before removal")
 
-	err = testingConfig.Lsdir("testdata")
-	assert.NoError(t, err)
+	testList(t, testingConfig)
 
 	fmt.Fprintln(testingConfig.output, "removing the first file")
 
 	err = testingConfig.delete(filepath.Join("testdata", files[0]))
 	assert.NoError(t, err)
 
-	err = testingConfig.Lsdir("testdata")
-	assert.NoError(t, err)
+	testList(t, testingConfig)
 
 	err = testingConfig.Rmdir("testdata")
 	assert.NoError(t, err)
 
 	fmt.Fprintln(testingConfig.output, "contents after removal")
 
-	err = testingConfig.Lsdir("testdata")
-	assert.NoError(t, err)
+	testList(t, testingConfig)
 
 	goldie.Assert(t, t.Name(), outputBuf.Bytes())
 }
