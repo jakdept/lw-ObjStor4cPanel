@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"strings"
+	"time"
 	//"log"
 	"net/http"
 	"os"
@@ -151,10 +152,23 @@ func (c *runningConfig) Lsdir(dir string) error {
 	}
 
 	for _, target := range items.Contents {
+		cleanLibTs := strings.TrimSuffix(target.LastModified, ".000Z")
+		cleanLibTs += "Z"
+		outputFormat := "Jan 02 15:04"
+		fileTime, err := time.Parse(time.RFC3339, cleanLibTs)
+		if err != nil {
+			return err
+		}
+
 		// prints out in the format defined by:
 		// "-rwxr-xr-1 root root 3171 Jan 18 12:23 temp.txt"
-		_, err = fmt.Fprintf(c.output, "-rwxr-xr-x %s %s %d Jan 18 12:23 %s\n",
-			target.Owner.ID, target.Owner.ID, target.Size, target.Key)
+		_, err = fmt.Fprintf(c.output, "-rwxr-xr-x %s %s %d %s %s\n",
+			target.Owner.ID,
+			target.Owner.ID,
+			target.Size,
+			fileTime.Format(outputFormat),
+			target.Key,
+		)
 		if err != nil {
 			return fmt.Errorf("failed display the file %s - %v", target.Key, err)
 		}
