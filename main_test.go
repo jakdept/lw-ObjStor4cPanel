@@ -1,17 +1,19 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
+
+	"testing"
 
 	"github.com/stretchr/testify/assert"
-	//"os"
-	//"reflect"
-	"testing"
 
 	"github.com/sebdah/goldie"
 )
@@ -235,11 +237,23 @@ func TestRemoteFolder(t *testing.T) {
 }
 
 func TestLsdir(t *testing.T) {
+	r, w := io.Pipe()
 	c, _ := loadTestingConfig(t)
 	err := c.SetupBucket()
 	assert.NoError(t, err)
 
-	c.output = os.Stdout
+	prefix := "-rwxr-xr-x"
+
+	c.output = w
+
+	scanner := bufio.NewScanner(r)
+	go func() {
+		for scanner.Scan() {
+			assert.True(t, strings.HasPrefix(scanner.Text(), prefix), "missing prefix - [%s]\n[%s]", prefix, scanner.Text)
+			fmt.Fprintln(os.Stderr, scanner.Text()) // print out each line for manual inspection
+		}
+		assert.NoError(t, scanner.Err())
+	}()
 
 	err = c.Rmdir("testdata")
 	assert.NoError(t, err)
@@ -261,6 +275,8 @@ func TestLsdir(t *testing.T) {
 
 	err = c.Lsdir("testdata")
 	assert.NoError(t, err)
+
+	w.Close()
 
 	err = c.Rmdir("testdata")
 	assert.NoError(t, err)
