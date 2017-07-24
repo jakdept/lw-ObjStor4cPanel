@@ -239,6 +239,10 @@ func (c *runningConfig) magicPut(remote, local string) error {
 // cli: `binary` `Rmdir` `Pwd` `path` `bucketName` `username`
 // passed to this is ["path"]
 func (c *runningConfig) Rmdir(target string) error {
+	if !strings.HasSuffix(target, string(os.PathSeparator)) {
+		target += string(os.PathSeparator)
+	}
+
 	items, err := c.bucket.List(target, "", "", pagesize)
 	if err != nil {
 		return fmt.Errorf("error listing path %s - %v", target, err)
