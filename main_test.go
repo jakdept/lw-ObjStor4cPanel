@@ -86,7 +86,7 @@ func TestSetupConnection(t *testing.T) {
 	assert.Equal(t, "liquidweb", connection.Region.Name, "the URL should be LW's")
 }
 
-func TestSetupBucket(t *testing.T) {
+func TestRunningConfig_SetupBucket(t *testing.T) {
 	testingConfig := &runningConfig{
 		Pwd:        "/",
 		AccessKey:  "AccEssKey",
@@ -117,7 +117,7 @@ func TestHiddenConfig(t *testing.T) {
 	assert.Equal(t, "liquidweb", testingConfig.bucket.S3.Region.Name, "the URL should be LW's")
 }
 
-func TestValidBucket(t *testing.T) {
+func TestRunningConfig_ValidBucket(t *testing.T) {
 	testingConfig, _ := loadTestingConfig(t)
 	connection, err := testingConfig.SetupConnection()
 	assert.NoError(t, err)
@@ -134,7 +134,7 @@ func TestValidBucket(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestChdir(t *testing.T) {
+func TestRunningConfig_Chdir(t *testing.T) {
 	outputBuf := bytes.Buffer{}
 	testingConfig := runningConfig{
 		Pwd:        "/",
@@ -236,7 +236,7 @@ func TestRemoteFolder(t *testing.T) {
 	goldie.Assert(t, t.Name(), outputBuf.Bytes())
 }
 
-func TestLsdir(t *testing.T) {
+func TestRunningConfig_Lsdir(t *testing.T) {
 	r, w := io.Pipe()
 	c, _ := loadTestingConfig(t)
 	err := c.SetupBucket()
