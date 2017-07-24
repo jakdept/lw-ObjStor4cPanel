@@ -233,3 +233,35 @@ func TestRemoteFolder(t *testing.T) {
 
 	goldie.Assert(t, t.Name(), outputBuf.Bytes())
 }
+
+func TestLsdir(t *testing.T) {
+	c, _ := loadTestingConfig(t)
+	err := c.SetupBucket()
+	assert.NoError(t, err)
+
+	c.output = os.Stdout
+
+	err = c.Rmdir("testdata")
+	assert.NoError(t, err)
+
+	err = c.Mkdir("testdata")
+	assert.NoError(t, err)
+	files := []string{
+		"thank_you_for_not_loitering.jpg",
+		"database.tar.gz",
+	}
+
+	for _, file := range files {
+		local := filepath.Join("testdata", file)
+		remote := filepath.Join("testdata", file)
+
+		err = c.magicPut(remote, local)
+		assert.NoError(t, err)
+	}
+
+	err = c.Lsdir("testdata")
+	assert.NoError(t, err)
+
+	err = c.Rmdir("testdata")
+	assert.NoError(t, err)
+}
