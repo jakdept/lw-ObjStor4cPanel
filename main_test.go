@@ -1,17 +1,19 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
+
+	"testing"
 
 	"github.com/stretchr/testify/assert"
-	//"os"
-	//"reflect"
-	"testing"
 
 	"github.com/sebdah/goldie"
 )
@@ -84,7 +86,7 @@ func TestSetupConnection(t *testing.T) {
 	assert.Equal(t, "liquidweb", connection.Region.Name, "the URL should be LW's")
 }
 
-func TestSetupBucket(t *testing.T) {
+func TestRunningConfig_SetupBucket(t *testing.T) {
 	testingConfig := &runningConfig{
 		Pwd:        "/",
 		AccessKey:  "AccEssKey",
@@ -115,7 +117,7 @@ func TestHiddenConfig(t *testing.T) {
 	assert.Equal(t, "liquidweb", testingConfig.bucket.S3.Region.Name, "the URL should be LW's")
 }
 
-func TestValidBucket(t *testing.T) {
+func TestRunningConfig_ValidBucket(t *testing.T) {
 	testingConfig, _ := loadTestingConfig(t)
 	connection, err := testingConfig.SetupConnection()
 	assert.NoError(t, err)
@@ -132,7 +134,7 @@ func TestValidBucket(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestChdir(t *testing.T) {
+func TestRunningConfig_Chdir(t *testing.T) {
 	outputBuf := bytes.Buffer{}
 	testingConfig := runningConfig{
 		Pwd:        "/",
@@ -156,6 +158,15 @@ func TestChdir(t *testing.T) {
 	goldie.Assert(t, t.Name(), outputBuf.Bytes())
 }
 
+func testList(t *testing.T, c *runningConfig) {
+	items, err := c.bucket.List("testdata/", "/", "", pagesize)
+	assert.NoError(t, err)
+
+	for _, target := range items.Contents {
+		fmt.Fprintf(c.output, "%d [%s]\n", target.Size, target.Key)
+	}
+}
+
 func TestRemoteFolder(t *testing.T) {
 	files := []string{
 		"thank_you_for_not_loitering.jpg",
@@ -170,10 +181,10 @@ func TestRemoteFolder(t *testing.T) {
 	err := testingConfig.SetupBucket()
 	assert.NoError(t, err)
 
-	err = testingConfig.Rmdir("/testdata")
+	err = testingConfig.Rmdir("testdata")
 	assert.NoError(t, err)
 
-	err = testingConfig.Mkdir("/testdata")
+	err = testingConfig.Mkdir("testdata")
 	assert.NoError(t, err)
 
 	for _, file := range files {
@@ -183,8 +194,8 @@ func TestRemoteFolder(t *testing.T) {
 
 		err = testingConfig.magicPut(remote, local)
 		assert.NoError(t, err)
-		err = testingConfig.Lsdir("testdata")
-		assert.NoError(t, err)
+
+		testList(t, testingConfig)
 	}
 
 	tmpdir, err := ioutil.TempDir("", "cPanel_backup_transporter")
@@ -206,24 +217,67 @@ func TestRemoteFolder(t *testing.T) {
 	}
 	fmt.Fprintln(testingConfig.output, "contents before removal")
 
-	err = testingConfig.Lsdir("testdata")
-	assert.NoError(t, err)
+	testList(t, testingConfig)
 
 	fmt.Fprintln(testingConfig.output, "removing the first file")
 
 	err = testingConfig.delete(filepath.Join("testdata", files[0]))
 	assert.NoError(t, err)
 
-	err = testingConfig.Lsdir("testdata")
-	assert.NoError(t, err)
+	testList(t, testingConfig)
 
 	err = testingConfig.Rmdir("testdata")
 	assert.NoError(t, err)
 
 	fmt.Fprintln(testingConfig.output, "contents after removal")
 
-	err = testingConfig.Lsdir("testdata")
-	assert.NoError(t, err)
+	testList(t, testingConfig)
 
 	goldie.Assert(t, t.Name(), outputBuf.Bytes())
+}
+
+func TestRunningConfig_Lsdir(t *testing.T) {
+	r, w := io.Pipe()
+	c, _ := loadTestingConfig(t)
+	err := c.SetupBucket()
+	assert.NoError(t, err)
+
+	prefix := "-rwxr-xr-x"
+
+	c.output = w
+
+	scanner := bufio.NewScanner(r)
+	go func() {
+		for scanner.Scan() {
+			assert.True(t, strings.HasPrefix(scanner.Text(), prefix), "missing prefix - [%s]\n[%s]", prefix, scanner.Text)
+			fmt.Fprintln(os.Stderr, scanner.Text()) // print out each line for manual inspection
+		}
+		assert.NoError(t, scanner.Err())
+	}()
+
+	err = c.Rmdir("testdata")
+	assert.NoError(t, err)
+
+	err = c.Mkdir("testdata")
+	assert.NoError(t, err)
+	files := []string{
+		"thank_you_for_not_loitering.jpg",
+		"database.tar.gz",
+	}
+
+	for _, file := range files {
+		local := filepath.Join("testdata", file)
+		remote := filepath.Join("testdata", file)
+
+		err = c.magicPut(remote, local)
+		assert.NoError(t, err)
+	}
+
+	err = c.Lsdir("testdata")
+	assert.NoError(t, err)
+
+	w.Close()
+
+	err = c.Rmdir("testdata")
+	assert.NoError(t, err)
 }
