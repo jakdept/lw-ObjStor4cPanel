@@ -7,4 +7,4 @@ fi
 
 echo $@ >> /var/log/cpbackuptrans.log
 
-/scripts/cPanelToObjectStore $@
+/usr/local/lp/bin/lw-ObjStor4cPanel $@

@@ -1,12 +1,12 @@
 %global lw_path /usr/local/lp/bin
-%global bin_name cPanelToObjectStore
+%global bin_name lw-ObjStor4cPanel
 %global git_repo github.com/jakdept/%{bin_name}
 %global goversion 1.8.3
 %global builddir ${RPM_BUILD_DIR}
 
 Summary: Liquid Web CSF ranges
-Name: lw-cp-objstor
-Version: 0.3
+Name: %{bin_name}
+Version: 0.4.0
 Release: 0
 License: MIT
 Group: Applications/System
