@@ -1,6 +1,6 @@
-# cPanelToObjectStore
+# lw-ObjStor4cPanel
 
-[![Build Status](https://travis-ci.org/jakdept/cPanelToObjectStore.svg?branch=master)](https://travis-ci.org/jakdept/cPanelToObjectStore)
+[![Build Status](https://travis-ci.org/jakdept/lw-ObjStor4cPanel.svg?branch=master)](https://travis-ci.org/jakdept/lw-ObjStor4cPanel)
 
 **_This is experimental for the time being_**
 
@@ -10,25 +10,32 @@ I assume the user understands the concept of access keys, secret keys, buckets, 
 
 ## Requirements ##
 
-This is written in Go. In order to compile this, you must have Go installed.
+Only docker is required to build the RPMs for this - see instructions below.
 
-Eventually, a compiled binary will be available to copy to the host system, and simply run. We may also choose to go with a RPM package instead.
+Before installing, you must have a valid Access Key and Secret Key in Object Storage, and a valid bucket within that account.
 
 ## Usage ##
 
-1. Compile the binary.
-1. Copy the compiled binary to somewhere on the server, and make sure it's executable.
-1. Go to *Additional Settings* in the Backup Configuration in WHM and create a *Custom* destination
-1. Give it a name and select whether you want to transfer system files
-1. For `Script`, point it to the place you stuck the script
-1. `Backup Directory` is optional, but good to use if the bucket you're going to use already has other things
-1. `Remote Host` is the **name of the bucket** you are going to use
-1. `Remote Account Username` is going to be a valid access key that you have setup
-1. `Remote Password` is going to be the secret key that is associated with the access key that you're using
+> You must already have a bucket created in Object Storage.
+
+> You must already have a valid Access Key and Secret Key ([manage.liquidweb.com](https://manage.liquidweb.com))
+1. Go clone this repository container - `https://github.com/jakdept/rpmbuild-docker.git`
+1. Build the github CentOS6 and CentOS7 docker containers.
+1. To build the Cent6 RPM run the following:
+`docker run --rm -v $(pwd)/:/home/rpmbuild/package jakdept/rpmbuild:cent6 rpmbuild -bb SPECS/lw-ObjStor4cPanel.spec`
+1. To build the Cent7 RPM run the following:
+`docker run --rm -v $(pwd)/:/home/rpmbuild/package jakdept/rpmbuild:cent7 rpmbuild -bb SPECS/lw-ObjStor4cPanel.spec`
+1. Get your build binary from the folder `x86_64` and put it on the server.
+1. Install that RPM on the server.
+1. Go to **Backup Configuration** in WHM and edit the **LW Object Storage** destination.
+1. Change **Remote Host** to the *name of the bucket* you are going to use.
+1. Change **Remote Account Username** to the *Access Key*.
+1. Change **Remote Password** to the *Secret Key*.
+1. *Backup Directory* can be modified if you want to put backups in a different directory on the server. If backing multiple servers up to the same bucket, you should use different *Backup Directories*.
 
 ## Testing ##
 
-You can run some (limited) tests without a valid configuration for Liquidweb's Object Storage, however in order to run all tests you need a valid configuration. This configuration should be stored in env vars - I use the following file (called testConfig.json) locally to set them up:
+You can run some (limited) tests without a valid configuration for Liquidweb's Object Storage, however in order to run all tests you need a valid configuration. This configuration should be stored in env vars:
 
 ```bash
 export PWD="/"
@@ -37,4 +44,8 @@ export SECRETKEY="secretKey"
 export BUCKET="bucketName"
 ```
 
-This can then be pulled in (as long as it has executable) with `source testConfig.json`.
+With this in place, and go installed, you can view test coverage with:
+
+```
+go test -v -coverprofile=$TMPDIR/c.out && go tool cover -html=$TMPDIR/c.out
+```
