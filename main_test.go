@@ -43,27 +43,22 @@ func loadTestingConfig(t *testing.T) (*runningConfig, *bytes.Buffer) {
 }
 
 func TestGetConfig(t *testing.T) {
-	os.Args = []string{"junk", "hackers", "/pwd/", "command", "args", "are", "here", "hack", "the", "gibson", "bucket", "access"}
+	os.Args = []string{"junk", "ls", "/pwd", "subpath/is/here", "pail", "bob"}
 	err := os.Setenv("PASSWORD", "sekret")
 	assert.NoError(t, err)
 
-	config := getConfig()
+	config, err := getConfig()
+	assert.NoError(t, err)
 
 	expectedConfig := runningConfig{
-		Command:    "hackers",
+		Command:    "ls",
 		Pwd:        "",
-		bucketName: "bucket",
-		AccessKey:  "access",
+		bucketName: "pail",
+		AccessKey:  "bob",
 		SecretKey:  "sekret",
 		output:     os.Stdout,
 		CmdParams: []string{
-			"command",
-			"args",
-			"are",
-			"here",
-			"hack",
-			"the",
-			"gibson",
+			"subpath/is/here",
 		},
 	}
 
