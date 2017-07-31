@@ -181,7 +181,7 @@ func (c *runningConfig) Lsdir(dir string) error {
 // passed to this is ["remote file", "local file"]
 func (c *runningConfig) magicGet(local, remote string) error {
 	// open up the output file for writing
-	outFile, err := os.Create(local)
+	outFile, err := os.OpenFile(local, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	defer outFile.Close()
 	if err != nil {
 		return fmt.Errorf("error writing to local file %s - %v", local, err)
