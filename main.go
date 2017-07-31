@@ -325,5 +325,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	config.callFunc()
+	if err = config.callFunc(); err != nil {
+		log.Fatal(err)
+	}
 }
