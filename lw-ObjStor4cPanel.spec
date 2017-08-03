@@ -6,7 +6,7 @@
 
 Summary: Liquid Web CSF ranges
 Name: %{bin_name}
-Version: 0.5.0
+Version: 1.0.0
 Release: 0
 License: MIT
 Group: Applications/System
@@ -14,7 +14,6 @@ BuildRoot: %{_topdir}/%{name}-%{version}-%{release}-build
 BuildArch: x86_64
 Requires: bash
 BuildRequires: curl git
-Source0: https://%{git_repo}/archive/%{version}.tar.gz?%{bin_name}-%{version}.tar.gz
 
 %description
 A transporter to connect cPanel's backup system to Liquid Web's Object Storage.
@@ -78,6 +77,9 @@ rm -rf ${RPM_BUILD_ROOT}
 %{lw_path}/%{bin_name}
 
 %changelog
+* Thu Aug  3 2017 Jack Hayhurst <jhayhurst@liquidweb.com> - version 1.0.0
+- finished RPM and bumped version number for final deployment
+
 * Thu Aug  3 2017 Jack Hayhurst <jhayhurst@liquidweb.com> - version 0.5.0
 - included some fixes for secteam
 
