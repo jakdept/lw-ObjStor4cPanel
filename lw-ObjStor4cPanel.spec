@@ -6,7 +6,7 @@
 
 Summary: Liquid Web CSF ranges
 Name: %{bin_name}
-Version: 0.4.0
+Version: 0.5.0
 Release: 0
 License: MIT
 Group: Applications/System
@@ -78,6 +78,12 @@ rm -rf ${RPM_BUILD_ROOT}
 %{lw_path}/%{bin_name}
 
 %changelog
+* Thu Aug  3 2017 Jack Hayhurst <jhayhurst@liquidweb.com> - version 0.5.0
+- included some fixes for secteam
+
+* Wed Jul 31 2017 Jack Hayhurst <jhayhurst@liquidweb.com> - version 0.4.0
+- renamed the script and rpm
+
 * Thu Apr 13 2017 Jack Hayhurst <jhayhurst@liquidweb.com> - version 0.3
 - got rpm version fully working - yay!
 
