@@ -37,11 +37,35 @@ type runningConfig struct {
 	output     io.Writer
 }
 
-func getConfig() runningConfig {
+func getConfig() (runningConfig, error) {
+	if len(os.Args) < 6 || len(os.Args) > 7 {
+		return runningConfig{}, fmt.Errorf("incorrect number of arguments - [%d]", len(os.Args))
+	}
 	config := new(runningConfig)
 	// parameters are passed as:
 	// binary Command Pwd [CmdParams ...] Bucket AccessKey
 	config.Command = os.Args[1]
+
+	switch len(os.Args) {
+	case 6:
+		switch config.Command {
+		case "delete":
+		case "chdir":
+		case "mkdir":
+		case "ls":
+		case "rmdir":
+			return runningConfig{}, fmt.Errorf("incorrect number of arguments for a %s - [%d]", config.Command, len(os.Args))
+		}
+	case 7:
+		switch config.Command {
+		case "get":
+		case "put":
+		default:
+			return runningConfig{}, fmt.Errorf("incorrect number of arguments for a %s - [%d]", config.Command, len(os.Args))
+		}
+	default:
+		return runningConfig{}, fmt.Errorf("invalid command %s", config.Command)
+	}
 	//Pwd := os.Args[2]
 	config.bucketName = os.Args[len(os.Args)-2]
 	config.AccessKey = os.Args[len(os.Args)-1]
@@ -53,7 +77,7 @@ func getConfig() runningConfig {
 
 	config.output = os.Stdout
 
-	return *config
+	return *config, nil
 }
 
 func (c *runningConfig) SetupBucket() error {
@@ -119,7 +143,7 @@ func (c *runningConfig) callFunc() error {
 }
 
 // Mkdir creates a given folder on the remote server
-// cli: `binary` `chdir` `Pwd` `path` `bucketName` `username`
+// cli: `binary` `mkdir` `Pwd` `path` `bucketName` `username`
 func (c *runningConfig) Mkdir(dir string) error {
 	// err := c.bucket.Put(dir, []byte{}, contentType, "0700")
 	// if err != nil {
@@ -181,7 +205,7 @@ func (c *runningConfig) Lsdir(dir string) error {
 // passed to this is ["remote file", "local file"]
 func (c *runningConfig) magicGet(local, remote string) error {
 	// open up the output file for writing
-	outFile, err := os.Create(local)
+	outFile, err := os.OpenFile(local, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	defer outFile.Close()
 	if err != nil {
 		return fmt.Errorf("error writing to local file %s - %v", local, err)
@@ -290,13 +314,18 @@ func (c *runningConfig) delete(remote string) error {
 
 func main() {
 
-	config := getConfig()
-
-	//connection := SetupConnection(config)
-	err := config.SetupBucket()
+	config, err := getConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	config.callFunc()
+	//connection := SetupConnection(config)
+	err = config.SetupBucket()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err = config.callFunc(); err != nil {
+		log.Fatal(err)
+	}
 }
