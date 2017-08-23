@@ -26,6 +26,16 @@ const pagesize = 1000
 
 const chunkSize = 33554432 // 32M in bytes
 
+var junkTimestamp time.Time
+
+func init() {
+	var err error
+	junkTimestamp, err = time.Parse(time.RFC3339, "1989-12-13T08:00:00Z")
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 type runningConfig struct {
 	Command    string
 	Pwd        string
@@ -175,10 +185,24 @@ func (c *runningConfig) Lsdir(dir string) error {
 		return fmt.Errorf("failed to list the contents of path %s - %v", dir, err)
 	}
 
+	outputFormat := "Jan 02 15:04"
+
+	for _, target := range items.CommonPrefixes {
+		_, err = fmt.Fprintf(c.output, "drwxr-xr-x %s %s %d %s %s\n",
+			"folder",
+			"folder",
+			4,
+			junkTimestamp.Format(outputFormat),
+			target,
+		)
+		if err != nil {
+			return fmt.Errorf("failed display the folder %s - %v", target, err)
+		}
+	}
+
 	for _, target := range items.Contents {
 		cleanLibTs := strings.TrimSuffix(target.LastModified, ".000Z")
 		cleanLibTs += "Z"
-		outputFormat := "Jan 02 15:04"
 		fileTime, err := time.Parse(time.RFC3339, cleanLibTs)
 		if err != nil {
 			return err
