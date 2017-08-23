@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"path/filepath"
 	"strings"
 	"time"
 	//"log"
@@ -152,6 +153,10 @@ func (c *runningConfig) callFunc() error {
 	return nil
 }
 
+func (c *runningConfig) cleanRemotePath(path string) string {
+	return strings.TrimPrefix(filepath.Join(c.Pwd, path), string(os.PathSeparator))
+}
+
 // Mkdir creates a given folder on the remote server
 // cli: `binary` `mkdir` `Pwd` `path` `bucketName` `username`
 func (c *runningConfig) Mkdir(dir string) error {
@@ -176,9 +181,7 @@ func (c *runningConfig) Chdir(dir string) error {
 // cli: `binary` `ls` `Pwd` `path` `bucketName` `username`
 // passed to this is ["path"]
 func (c *runningConfig) Lsdir(dir string) error {
-	if !strings.HasSuffix(dir, string(os.PathSeparator)) {
-		dir = dir + string(os.PathSeparator)
-	}
+	dir = c.cleanRemotePath(dir) + string(os.PathSeparator)
 
 	items, err := c.bucket.List(dir, "/", "", pagesize)
 	if err != nil {
@@ -187,13 +190,16 @@ func (c *runningConfig) Lsdir(dir string) error {
 
 	outputFormat := "Jan 02 15:04"
 
+	fmt.Fprintf(c.output, "total %d\n",
+		len(items.CommonPrefixes)+len(items.Contents))
+
 	for _, target := range items.CommonPrefixes {
 		_, err = fmt.Fprintf(c.output, "drwxr-xr-x %s %s %d %s %s\n",
 			"folder",
 			"folder",
 			4,
 			junkTimestamp.Format(outputFormat),
-			target,
+			strings.TrimPrefix(target, dir),
 		)
 		if err != nil {
 			return fmt.Errorf("failed display the folder %s - %v", target, err)
@@ -215,7 +221,7 @@ func (c *runningConfig) Lsdir(dir string) error {
 			target.Owner.ID,
 			target.Size,
 			fileTime.Format(outputFormat),
-			target.Key,
+			strings.TrimPrefix(target.Key, dir),
 		)
 		if err != nil {
 			return fmt.Errorf("failed display the file %s - %v", target.Key, err)
