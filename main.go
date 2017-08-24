@@ -190,6 +190,7 @@ func (c *runningConfig) Lsdir(dir string) error {
 
 	outputFormat := "Jan 02 15:04"
 
+	// cPanel requires the total line from the top of some ls -l output
 	fmt.Fprintf(c.output, "total %d\n",
 		len(items.CommonPrefixes)+len(items.Contents))
 

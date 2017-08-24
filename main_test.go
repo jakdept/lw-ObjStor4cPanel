@@ -241,9 +241,16 @@ func TestRunningConfig_Lsdir(t *testing.T) {
 
 	c.output = w
 
+	var pastFirstLine bool
+
 	scanner := bufio.NewScanner(r)
 	go func() {
 		for scanner.Scan() {
+			if !pastFirstLine {
+				assert.True(t, strings.HasPrefix(scanner.Text(), "total"), "missing first total line")
+				pastFirstLine = true
+				continue
+			}
 			assert.True(t, strings.HasPrefix(scanner.Text(), prefix), "missing prefix - [%s]\n[%s]", prefix, scanner.Text)
 			fmt.Fprintln(os.Stderr, scanner.Text()) // print out each line for manual inspection
 		}
