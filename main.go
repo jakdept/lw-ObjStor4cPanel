@@ -65,6 +65,7 @@ func getConfig() (runningConfig, error) {
 		case "mkdir":
 		case "ls":
 		case "rmdir":
+		default:
 			return runningConfig{}, fmt.Errorf("incorrect number of arguments for a %s - [%d]", config.Command, len(os.Args))
 		}
 	case 7:
