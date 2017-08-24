@@ -195,7 +195,7 @@ func (c *runningConfig) Lsdir(dir string) error {
 		len(items.CommonPrefixes)+len(items.Contents))
 
 	for _, target := range items.CommonPrefixes {
-		_, err = fmt.Fprintf(c.output, "drwxr-xr-x %s %s %d %s %s\n",
+		_, err = fmt.Fprintf(c.output, "drwxr-xr-x 63 %s %s %d %s %s\n",
 			"dir",
 			"dir",
 			63,
@@ -217,7 +217,7 @@ func (c *runningConfig) Lsdir(dir string) error {
 
 		// prints out in the format defined by:
 		// "-rwxr-xr-1 root root 3171 Jan 18 12:23 temp.txt"
-		_, err = fmt.Fprintf(c.output, "-rwxr-xr-x %s %s %d %s %s\n",
+		_, err = fmt.Fprintf(c.output, "-rwxr-xr-x 1 %s %s %d %s %s\n",
 			target.Owner.ID,
 			target.Owner.ID,
 			target.Size,
