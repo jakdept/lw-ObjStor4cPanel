@@ -31,7 +31,7 @@ var junkTimestamp time.Time
 
 func init() {
 	var err error
-	junkTimestamp, err = time.Parse(time.RFC3339, "1989-12-13T08:00:00Z")
+	junkTimestamp, err = time.Parse(time.RFC3339, "2011-01-01T08:00:00Z")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -196,9 +196,9 @@ func (c *runningConfig) Lsdir(dir string) error {
 
 	for _, target := range items.CommonPrefixes {
 		_, err = fmt.Fprintf(c.output, "drwxr-xr-x %s %s %d %s %s\n",
-			"folder",
-			"folder",
-			4,
+			"dir",
+			"dir",
+			63,
 			junkTimestamp.Format(outputFormat),
 			strings.TrimPrefix(target, dir),
 		)
