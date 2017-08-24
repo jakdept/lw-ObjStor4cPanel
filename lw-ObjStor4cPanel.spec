@@ -4,9 +4,9 @@
 %global goversion 1.8.3
 %global builddir ${RPM_BUILD_DIR}
 
-Summary: Liquid Web CSF ranges
+Summary: LiquidWeb Object Storage transporter for cPanel
 Name: %{bin_name}
-Version: 1.0.0
+Version: 1.1.0
 Release: 0
 License: MIT
 Group: Applications/System
@@ -43,6 +43,8 @@ export GOPATH=%{builddir}/go
 export GOOS=linux
 export GOARCH=amd64
 
+echo 'copying updates to package not in git repository from local'
+
 go install %{git_repo}
 
 %install
@@ -54,17 +56,19 @@ mkdir -p %{buildroot}/%{lw_path}
 install -m 0755 ${GOPATH}/bin/%{bin_name} %{buildroot}%{lw_path}
 
 %post
-[[ $1 == 1 ]] && whmapi1 backup_destination_add \
+whmapi1 backup_destination_list --output=xml | grep -qF '<name>LW Object Storage</name>'
+[[ $? != 0 ]] && whmapi1 backup_destination_add \
   name=LW\ Object\ Storage \
-  disabled=0 \
+  disabled=1 \
   type=Custom \
   upload_system_backup=on \
   script=%{lw_path}/%{bin_name} \
   host=bucketname \
-  path=backups/ \
+  path=backup/$(hostname)/ \
   timeout=300 \
   username=username \
   password=changeme > /dev/null
+exit 0
 
 # cannot cleanly do preun action - cPanel assigns a random id and does not make
 # it easy to find a specific backup destination
@@ -77,13 +81,20 @@ rm -rf ${RPM_BUILD_ROOT}
 %{lw_path}/%{bin_name}
 
 %changelog
+* Wed Aug 23 2017 Jack Hayhurst <jhayhurst@liquidweb.com> - version 1.1.0
+- corrected package summary/long name.
+- corrected lsdir function so that it now lists folders
+- got cPanel backup purging working
+- added something to make sure that the backup destination is added just once
+
+
 * Thu Aug  3 2017 Jack Hayhurst <jhayhurst@liquidweb.com> - version 1.0.0
 - finished RPM and bumped version number for final deployment
 
 * Thu Aug  3 2017 Jack Hayhurst <jhayhurst@liquidweb.com> - version 0.5.0
 - included some fixes for secteam
 
-* Wed Jul 31 2017 Jack Hayhurst <jhayhurst@liquidweb.com> - version 0.4.0
+* Thu Jul 31 2017 Jack Hayhurst <jhayhurst@liquidweb.com> - version 0.4.0
 - renamed the script and rpm
 
 * Thu Apr 13 2017 Jack Hayhurst <jhayhurst@liquidweb.com> - version 0.3

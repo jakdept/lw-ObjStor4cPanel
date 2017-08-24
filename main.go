@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"path/filepath"
 	"strings"
 	"time"
 	//"log"
@@ -25,6 +26,16 @@ const contentType = "application/octet-stream"
 const pagesize = 1000
 
 const chunkSize = 33554432 // 32M in bytes
+
+var junkTimestamp time.Time
+
+func init() {
+	var err error
+	junkTimestamp, err = time.Parse(time.RFC3339, "2011-01-01T08:00:00Z")
+	if err != nil {
+		log.Fatal(err)
+	}
+}
 
 type runningConfig struct {
 	Command    string
@@ -54,6 +65,7 @@ func getConfig() (runningConfig, error) {
 		case "mkdir":
 		case "ls":
 		case "rmdir":
+		default:
 			return runningConfig{}, fmt.Errorf("incorrect number of arguments for a %s - [%d]", config.Command, len(os.Args))
 		}
 	case 7:
@@ -142,6 +154,10 @@ func (c *runningConfig) callFunc() error {
 	return nil
 }
 
+func (c *runningConfig) cleanRemotePath(path string) string {
+	return strings.TrimPrefix(filepath.Join(c.Pwd, path), string(os.PathSeparator))
+}
+
 // Mkdir creates a given folder on the remote server
 // cli: `binary` `mkdir` `Pwd` `path` `bucketName` `username`
 func (c *runningConfig) Mkdir(dir string) error {
@@ -166,19 +182,35 @@ func (c *runningConfig) Chdir(dir string) error {
 // cli: `binary` `ls` `Pwd` `path` `bucketName` `username`
 // passed to this is ["path"]
 func (c *runningConfig) Lsdir(dir string) error {
-	if !strings.HasSuffix(dir, string(os.PathSeparator)) {
-		dir = dir + string(os.PathSeparator)
-	}
+	dir = c.cleanRemotePath(dir) + string(os.PathSeparator)
 
 	items, err := c.bucket.List(dir, "/", "", pagesize)
 	if err != nil {
 		return fmt.Errorf("failed to list the contents of path %s - %v", dir, err)
 	}
 
+	outputFormat := "Jan 02 15:04"
+
+	// cPanel requires the total line from the top of some ls -l output
+	fmt.Fprintf(c.output, "total %d\n",
+		len(items.CommonPrefixes)+len(items.Contents))
+
+	for _, target := range items.CommonPrefixes {
+		_, err = fmt.Fprintf(c.output, "drwxr-xr-x 63 %s %s %d %s %s\n",
+			"dir",
+			"dir",
+			63,
+			junkTimestamp.Format(outputFormat),
+			strings.TrimPrefix(target, dir),
+		)
+		if err != nil {
+			return fmt.Errorf("failed display the folder %s - %v", target, err)
+		}
+	}
+
 	for _, target := range items.Contents {
 		cleanLibTs := strings.TrimSuffix(target.LastModified, ".000Z")
 		cleanLibTs += "Z"
-		outputFormat := "Jan 02 15:04"
 		fileTime, err := time.Parse(time.RFC3339, cleanLibTs)
 		if err != nil {
 			return err
@@ -186,12 +218,12 @@ func (c *runningConfig) Lsdir(dir string) error {
 
 		// prints out in the format defined by:
 		// "-rwxr-xr-1 root root 3171 Jan 18 12:23 temp.txt"
-		_, err = fmt.Fprintf(c.output, "-rwxr-xr-x %s %s %d %s %s\n",
+		_, err = fmt.Fprintf(c.output, "-rwxr-xr-x 1 %s %s %d %s %s\n",
 			target.Owner.ID,
 			target.Owner.ID,
 			target.Size,
 			fileTime.Format(outputFormat),
-			target.Key,
+			strings.TrimPrefix(target.Key, dir),
 		)
 		if err != nil {
 			return fmt.Errorf("failed display the file %s - %v", target.Key, err)
